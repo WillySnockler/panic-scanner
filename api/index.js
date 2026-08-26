@@ -1,136 +1,93 @@
-const fs = require('fs');
-const path = require('path');
+const fs=require('fs');
+const path=require('path');
 
-function patch(html) {
-  // Strong mobile anti-selection behavior. Inputs remain editable.
-  html = html.replace(
-    '</style>',
-    `
-    @media(max-width:620px){
-      *,*::before,*::after{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;-webkit-tap-highlight-color:transparent}
-      input,textarea,input *{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}
-      .interactiveChart,.interactiveChart *,.eliteChart,.eliteChart *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
-      .mobileSettings{padding-bottom:90px}
-      .settingsGrid{grid-template-columns:1fr!important}
-      .settingRow{align-items:flex-start!important}
-      .settingControl{width:100%!important;justify-content:flex-end}
-    }
-    .settingsPanel{position:fixed;inset:0;background:#07090ff7;z-index:160;display:none;overflow:auto;padding:30px}
-    .settingsPanel.open{display:block}
-    .settingsShell{width:min(900px,100%);margin:0 auto;background:linear-gradient(180deg,#101722,#0b1018);border:1px solid var(--line);border-radius:24px;box-shadow:0 30px 100px #000b;overflow:hidden}
-    .settingsHeader{display:flex;justify-content:space-between;align-items:center;padding:22px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0b1018f5;backdrop-filter:blur(18px);z-index:2}
-    .settingsHeader p{margin:4px 0 0;color:var(--muted);font-size:11px}
-    .settingsBody{padding:24px}
-    .settingsSection{margin-bottom:24px}
-    .settingsSection h3{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#77849a;margin:0 0 10px}
-    .settingsCard{border:1px solid var(--line);border-radius:16px;background:#0e151f;overflow:hidden}
-    .settingRow{display:flex;justify-content:space-between;gap:18px;align-items:center;padding:16px 17px;border-top:1px solid var(--line)}
-    .settingRow:first-child{border-top:0}
-    .settingCopy b{font-size:13px}.settingCopy p{margin:4px 0 0;color:var(--muted);font-size:10px;line-height:1.45}
-    .settingControl{display:flex;align-items:center;gap:9px;flex:0 0 auto}
-    .toggle{width:46px;height:26px;border-radius:99px;border:1px solid #334055;background:#171f2c;position:relative;padding:0}
-    .toggle i{position:absolute;width:20px;height:20px;left:2px;top:2px;border-radius:50%;background:#8a95a8;transition:.18s}
-    .toggle.on{background:#2a2154;border-color:#786cff88}.toggle.on i{left:22px;background:var(--purple)}
-    .settingsSelect{background:#0a1018;color:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-width:120px}
-    .settingsRange{width:130px;accent-color:var(--purple)}
-    .settingsHint{color:#69758a;font-size:10px;line-height:1.5;margin-top:12px}
-    .settingsDanger{border-color:#ff526633}.settingsDanger button{background:#17101a;border:1px solid #ff526655;color:#ff8794;border-radius:10px;padding:9px 12px;font-weight:900}
-    .conceptStrip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:24px 0 4px;max-width:900px}
-    .conceptCard{padding:15px;border:1px solid var(--line);border-radius:14px;background:#0c121b}.conceptCard b{font-size:11px}.conceptCard p{margin:5px 0 0;color:var(--muted);font-size:10px;line-height:1.5}
-    .searchLabel{margin-top:30px;font-size:11px;font-weight:1000;letter-spacing:1.3px;text-transform:uppercase;color:#9aa6ba}
-    @media(max-width:900px){.conceptStrip{grid-template-columns:1fr 1fr}}
-    @media(max-width:620px){.settingsPanel{padding:12px}.settingsBody{padding:16px}.settingsHeader{padding:17px}.conceptStrip{grid-template-columns:1fr}.conceptCard{padding:13px}}
-    ` + '</style>'
-  );
+function patch(html){
+  const css=`<style>
+  /* Product polish */
+  .psHomeExtra{margin-top:34px}.psSectionTitle{display:flex;justify-content:space-between;align-items:end;gap:18px;margin-bottom:14px}.psSectionTitle h2{margin:0;font-size:22px}.psSectionTitle p{margin:5px 0 0;color:var(--muted);font-size:11px;line-height:1.5}.psFeatureGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.psFeature{padding:18px;border:1px solid var(--line);border-radius:17px;background:linear-gradient(180deg,#101722,#0b1018)}.psFeature .num{font-size:9px;color:var(--purple);font-weight:1000;letter-spacing:1.5px}.psFeature h3{font-size:15px;margin:9px 0 6px}.psFeature p{font-size:10px;color:var(--muted);line-height:1.55;margin:0}.psWorkflow{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.psWorkflowCard{padding:21px;border:1px solid var(--line);border-radius:18px;background:#0d141e}.psStep{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.psStep:first-child{border-top:0}.psStepNo{width:28px;height:28px;border-radius:9px;background:#17132a;border:1px solid #786cff55;display:grid;place-items:center;color:#b9afff;font-size:10px;font-weight:1000;flex:none}.psStep b{font-size:11px}.psStep p{margin:4px 0 0;color:var(--muted);font-size:9px;line-height:1.45}.psTrust{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.psTrust div{padding:13px;border:1px solid var(--line);border-radius:13px;background:#0b1119}.psTrust b{font-size:10px}.psTrust span{display:block;color:var(--muted);font-size:9px;margin-top:4px;line-height:1.45}.psFaq{display:grid;grid-template-columns:1fr 1fr;gap:10px}.psFaq details{border:1px solid var(--line);border-radius:13px;background:#0d141e;padding:13px}.psFaq summary{cursor:pointer;font-size:10px;font-weight:900}.psFaq p{color:var(--muted);font-size:9px;line-height:1.5}.psDisclaimer{margin-top:14px;color:#657187;font-size:8px;line-height:1.55;text-align:center}.psModal{position:fixed;inset:0;z-index:300;display:none;background:#000b;backdrop-filter:blur(14px);padding:18px;overflow:auto}.psModal.open{display:block}.psModalShell{width:min(1050px,100%);margin:5vh auto;background:#0b1119;border:1px solid var(--line);border-radius:24px;box-shadow:0 30px 110px #000d;overflow:hidden}.psModalHead{display:flex;justify-content:space-between;align-items:center;padding:20px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0b1119f5;z-index:2}.psModalHead b{font-size:16px}.psModalHead span{display:block;color:var(--muted);font-size:9px;margin-top:4px}.psClose{border:1px solid var(--line);background:#111925;color:#fff;width:34px;height:34px;border-radius:10px}.psModalBody{padding:22px}.psPlans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.psPlan{padding:19px;border:1px solid var(--line);border-radius:18px;background:#0e151f}.psPlan.featured{border-color:#786cff88;box-shadow:0 0 0 1px #786cff22 inset}.psPlan.elite{border-color:#f5c85c77}.psPlan h3{margin:0;font-size:18px}.psPrice{font-size:26px;font-weight:1000;margin:10px 0}.psPlan p{color:var(--muted);font-size:9px;line-height:1.5}.psPlan ul{padding-left:17px;color:#cbd2df;font-size:9px;line-height:1.8;min-height:125px}.psPlan button,.psPromo button{width:100%;border:0;border-radius:10px;padding:11px;font-weight:1000;background:#fff}.psPlan.featured button{background:var(--purple);color:#fff}.psPlan.elite button{background:var(--yellow);color:#111}.psPromo{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:15px;background:#0d141e}.psPromo label{display:block;font-size:9px;color:var(--muted);margin-bottom:7px}.psPromoRow{display:flex;gap:8px}.psPromo input{flex:1;min-width:0;background:#080d15;border:1px solid var(--line);color:#fff;border-radius:10px;padding:11px}.psPromo button{width:auto;padding:11px 17px;background:#171f2d;color:#fff;border:1px solid var(--line)}.psAccount{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}.psAccountCard{padding:15px;border:1px solid var(--line);border-radius:15px;background:#0e151f}.psAccountCard b{font-size:11px}.psAccountCard p{margin:5px 0 0;color:var(--muted);font-size:9px}.psSettingsGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.psSettingGroup{border:1px solid var(--line);border-radius:16px;background:#0e151f;overflow:hidden}.psSettingGroup h3{font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:#7d899d;padding:14px 15px;margin:0;border-bottom:1px solid var(--line)}.psSetting{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:14px 15px;border-top:1px solid var(--line)}.psSetting:first-of-type{border-top:0}.psSetting b{font-size:10px}.psSetting p{margin:3px 0 0;color:var(--muted);font-size:8px;line-height:1.4}.psToggle{width:43px;height:25px;border-radius:99px;border:1px solid #344054;background:#171f2d;position:relative;flex:none}.psToggle i{position:absolute;left:2px;top:2px;width:19px;height:19px;border-radius:50%;background:#7d899d;transition:.15s}.psToggle.on{background:#2b2256;border-color:#786cff77}.psToggle.on i{left:20px;background:var(--purple)}.psSelect{background:#080d15;color:#fff;border:1px solid var(--line);border-radius:9px;padding:8px;font-size:9px}.psRange{width:100px;accent-color:var(--purple)}
+  @media(max-width:900px){.psFeatureGrid{grid-template-columns:1fr 1fr}.psWorkflow{grid-template-columns:1fr}.psPlans{grid-template-columns:1fr}.psSettingsGrid,.psAccount{grid-template-columns:1fr}.psFaq{grid-template-columns:1fr}}
+  @media(max-width:620px){*,*::before,*::after{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;-webkit-tap-highlight-color:transparent}.auth input,input,textarea,[contenteditable=true]{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}.interactiveChart,.interactiveChart *,.eliteChart,.eliteChart *{user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important;touch-action:none!important}.psModal{padding:10px}.psModalShell{margin:0 auto;border-radius:19px}.psModalBody{padding:15px}.psFeatureGrid,.psTrust{grid-template-columns:1fr}.psFeature{padding:15px}.psSectionTitle{display:block}.psPlans{grid-template-columns:1fr}.psPromoRow{display:block}.psPromoRow button{margin-top:7px;width:100%}.psSettingsGrid{grid-template-columns:1fr}.psSetting{align-items:flex-start}.psSetting .psRange{margin-top:5px}}
+  </style>`;
+  html=html.replace('</style>',css+'</style>');
 
-  // Keep chart information in a fixed top-right readout, away from the finger.
-  html = html.replace(
-    '.chartTip,.eliteTip{position:absolute;left:12px;top:12px;',
-    '.chartTip,.eliteTip{position:absolute;left:auto;right:10px;top:10px;'
-  );
-  html = html.replace(
-    "tip.style.left=Math.max(8,Math.min(r.width-205,x+14))+'px';tip.style.top=Math.max(8,Math.min(r.height-100,best.y/330*r.height-55))+'px'",
-    "tip.style.left='auto';tip.style.right='10px';tip.style.top='10px'"
-  );
+  // Correct the mobile chart interaction: never let a long press turn the chart into selectable text.
+  const interaction=`<script>
+  (()=>{
+    const mobile=()=>window.matchMedia('(max-width:620px)').matches;
+    const block=e=>{if(mobile()&&!e.target.closest('input,textarea,[contenteditable=true]'))e.preventDefault()};
+    ['copy','cut','contextmenu','dragstart','selectstart'].forEach(x=>document.addEventListener(x,block,{capture:true}));
+    document.addEventListener('touchstart',e=>{if(mobile()&&e.target.closest('.interactiveChart,.eliteChart')){e.preventDefault()}},{capture:true,passive:false});
+  })();
+  </script>`;
 
-  // Separate Settings from Account & Plans.
-  html = html.replace('onclick="openDrawer()"><i>◆</i><span>Plans</span>', 'onclick="openAccountPlans()"><i>◆</i><span>Account &amp; Plans</span>');
-  html = html.replace('onclick="openDrawer()"><i>⚙</i><span>Settings</span>', 'onclick="openSettings()"><i>⚙</i><span>Settings</span>');
-  html = html.replace('class="nav" onclick="openDrawer()"><i>●</i><span>Account</span>', 'class="nav" onclick="openAccountPlans()"><i>●</i><span>Account &amp; Plans</span>');
-  html = html.replace('onclick="openDrawer()">W</button>', 'onclick="openAccountPlans()">W</button>');
-
-  // Landing page: explain the concept first, then search and analyse on this same page.
-  html = html.replace(
-    '<p class="lead">Scan a company, see the real price action, follow the news that moved it, then investigate whether the market reaction looks excessive.</p><div class="search">',
-    `<p class="lead">Panic Scanner is built around one idea: when a stock drops hard, do not react to the fear first. Look at the price action, technical damage, fundamentals and news together to understand what actually changed.</p>
-    <div class="conceptStrip"><div class="conceptCard"><b>01 · Detect the reaction</b><p>Find unusually sharp moves and see the exact sessions behind them.</p></div><div class="conceptCard"><b>02 · Challenge the panic</b><p>Compare momentum, trend, drawdown and company evidence instead of guessing.</p></div><div class="conceptCard"><b>03 · Investigate the reason</b><p>Connect the market move with catalysts, news and risk before forming a view.</p></div></div><div class="searchLabel">Search &amp; analyse</div><div class="search">`
-  );
-  html = html.replace('placeholder="Search a stock — BlackRock or BLK"', 'placeholder="Search a stock or company"');
-  html = html.replace('Standard scan · Pro investigation · Elite stress mapping', 'Search any stock or company · Analyse the market reaction · Investigate the evidence');
-
-  // Add a real Settings page/modal immediately before the existing drawer backdrop.
-  const settingsPanel = `
-  <section class="settingsPanel mobileSettings" id="settingsPanel" aria-label="Settings">
-    <div class="settingsShell">
-      <div class="settingsHeader"><div><b>Settings</b><p>Control your Panic Scanner experience.</p></div><button class="close" onclick="closeSettings()">×</button></div>
-      <div class="settingsBody">
-        <div class="settingsSection"><h3>App experience</h3><div class="settingsCard">
-          <div class="settingRow"><div class="settingCopy"><b>Sound effects</b><p>Play small sounds for actions and confirmations.</p></div><div class="settingControl"><button id="soundToggle" class="toggle on" onclick="toggleSetting('sound')"><i></i></button></div></div>
-          <div class="settingRow"><div class="settingCopy"><b>Sound volume</b><p>Set the volume used by interface sounds.</p></div><div class="settingControl"><input id="soundVolume" class="settingsRange" type="range" min="0" max="100" value="70" oninput="saveSetting('soundVolume',this.value)"></div></div>
-          <div class="settingRow"><div class="settingCopy"><b>Haptic feedback</b><p>Use light vibration for supported mobile actions.</p></div><div class="settingControl"><button id="hapticToggle" class="toggle on" onclick="toggleSetting('haptic')"><i></i></button></div></div>
-          <div class="settingRow"><div class="settingCopy"><b>Reduce motion</b><p>Reduce sliding and transition animations.</p></div><div class="settingControl"><button id="motionToggle" class="toggle" onclick="toggleSetting('reduceMotion')"><i></i></button></div></div>
-          <div class="settingRow"><div class="settingCopy"><b>Compact interface</b><p>Use tighter spacing when viewing lots of research.</p></div><div class="settingControl"><button id="compactToggle" class="toggle" onclick="toggleSetting('compact')"><i></i></button></div></div>
-        </div></div>
-        <div class="settingsSection"><h3>Market & charts</h3><div class="settingsCard">
-          <div class="settingRow"><div class="settingCopy"><b>Default chart range</b><p>Choose how much price history appears first.</p></div><div class="settingControl"><select id="defaultRange" class="settingsSelect" onchange="saveSetting('defaultRange',this.value)"><option value="20">20 days</option><option value="40">40 days</option><option value="60" selected>60 days</option><option value="all">All available</option></select></div></div>
-          <div class="settingRow"><div class="settingCopy"><b>Auto-load analysis</b><p>Keep the analysis view open after selecting a result.</p></div><div class="settingControl"><button id="autoAnalysisToggle" class="toggle on" onclick="toggleSetting('autoAnalysis')"><i></i></button></div></div>
-          <div class="settingRow"><div class="settingCopy"><b>Price display</b><p>Choose how many decimals are shown where possible.</p></div><div class="settingControl"><select id="decimals" class="settingsSelect" onchange="saveSetting('decimals',this.value)"><option value="auto" selected>Automatic</option><option value="0">0 decimals</option><option value="2">2 decimals</option></select></div></div>
-        </div></div>
-        <div class="settingsSection"><h3>Notifications</h3><div class="settingsCard">
-          <div class="settingRow"><div class="settingCopy"><b>Market alerts</b><p>Allow future Panic Scanner alerts and watchlist notifications.</p></div><div class="settingControl"><button id="alertsToggle" class="toggle on" onclick="toggleSetting('alerts')"><i></i></button></div></div>
-          <div class="settingRow"><div class="settingCopy"><b>News alerts</b><p>Allow important news notifications for saved research.</p></div><div class="settingControl"><button id="newsToggle" class="toggle on" onclick="toggleSetting('newsAlerts')"><i></i></button></div></div>
-        </div></div>
-        <div class="settingsSection"><h3>Privacy & data</h3><div class="settingsCard">
-          <div class="settingRow"><div class="settingCopy"><b>Save recent searches</b><p>Remember recent searches locally on this device.</p></div><div class="settingControl"><button id="historyToggle" class="toggle on" onclick="toggleSetting('history')"><i></i></button></div></div>
-          <div class="settingRow settingsDanger"><div class="settingCopy"><b>Reset app preferences</b><p>Return all Panic Scanner settings to their defaults.</p></div><div class="settingControl"><button onclick="resetSettings()">Reset</button></div></div>
-        </div></div>
-        <p class="settingsHint">Settings are stored on this device. Your account, subscription and promo/access controls are managed separately under Account &amp; Plans.</p>
+  // Generic, non-deceptive product content for the home page. It explains the actual workflow instead of pretending to be a live data feed.
+  const home=`<section class="psHomeExtra" id="ps-home-extra">
+    <div class="psSectionTitle"><div><h2>Built for the moment a stock moves</h2><p>Panic Scanner turns a sharp market reaction into a structured research workflow.</p></div></div>
+    <div class="psFeatureGrid">
+      <article class="psFeature"><div class="num">REACTION MAP</div><h3>See what actually happened</h3><p>Interactive price history lets you inspect the exact sessions, dates and drawdown behind a move.</p></article>
+      <article class="psFeature"><div class="num">CATALYST CONTEXT</div><h3>Find the reason</h3><p>Put price action next to the company and event context so you can investigate the cause instead of guessing.</p></article>
+      <article class="psFeature"><div class="num">RECOVERY WATCH</div><h3>Separate damage from recovery</h3><p>Track where a sell-off is still deteriorating versus where the reaction begins to stabilize.</p></article>
+    </div>
+    <div class="psWorkflow" style="margin-top:12px">
+      <div class="psWorkflowCard"><div class="psSectionTitle"><div><h2>One workflow. No noise.</h2><p>Designed to keep the research question visible from search to conclusion.</p></div></div>
+        <div class="psStep"><div class="psStepNo">01</div><div><b>Search a stock or company</b><p>Start with a name you care about — not a preselected example.</p></div></div>
+        <div class="psStep"><div class="psStepNo">02</div><div><b>Scan the reaction</b><p>Inspect price movement, momentum, drawdown and the shape of the sell-off.</p></div></div>
+        <div class="psStep"><div class="psStepNo">03</div><div><b>Investigate the evidence</b><p>Work through the technical, company and catalyst context before reaching a conclusion.</p></div></div>
+        <div class="psStep"><div class="psStepNo">04</div><div><b>Keep watching</b><p>Save research and return when the situation changes rather than starting over.</p></div></div>
+      </div>
+      <div class="psWorkflowCard"><div class="psSectionTitle"><div><h2>Why people come back</h2><p>The product is built around repeat research, not one-off predictions.</p></div></div>
+        <div class="psTrust"><div><b>Evidence first</b><span>Show the context behind the reaction.</span></div><div><b>Interactive</b><span>Explore the exact date and price on the chart.</span></div><div><b>Decision support</b><span>Research the situation without pretending to know the future.</span></div></div>
+        <div style="margin-top:14px;padding:15px;border:1px solid #786cff44;border-radius:14px;background:#141329"><b style="font-size:11px">The Panic Scanner principle</b><p style="margin:6px 0 0;color:#aeb8ca;font-size:9px;line-height:1.55">A falling price is an event, not an explanation. The product exists to help you understand the difference.</p></div>
       </div>
     </div>
+    <div style="margin-top:24px"><div class="psSectionTitle"><div><h2>Questions before you start?</h2><p>Clear answers without the sales fluff.</p></div></div><div class="psFaq">
+      <details><summary>Does Panic Scanner tell me what to buy?</summary><p>No. It is designed as a research and market-context tool. The final investment decision stays with the user.</p></details>
+      <details><summary>What makes the Elite view different?</summary><p>Elite is designed to expose the structure of a major reaction with deeper stress and recovery context rather than just showing a headline percentage.</p></details>
+      <details><summary>Can I use it on mobile?</summary><p>Yes. Charts are touch-interactive and the interface is designed around one-handed mobile research.</p></details>
+      <details><summary>Why do plans exist?</summary><p>Different plans can control access to deeper research, history and premium workflow features without changing the core product concept.</p></details>
+    </div></div>
+    <div class="psDisclaimer">Panic Scanner is a research and educational tool. Market data and analysis can be incomplete or delayed. Nothing on the platform is personalized investment advice or a guarantee of future performance. Always do your own due diligence.</div>
   </section>`;
-  html = html.replace('<div class="drawerBack" id="backdrop"', settingsPanel + '<div class="drawerBack" id="backdrop"');
+  html=html.replace('</main>',home+'</main>');
 
-  // Make the existing account drawer explicitly account + subscriptions.
-  html = html.replace('<b>Account & Settings</b>', '<b>Account & Plans</b>');
-  html = html.replace('<h3>Membership</h3>', '<h3>Account &amp; subscription</h3>');
+  const modals=`
+  <div class="psModal" id="psAccountModal"><div class="psModalShell"><div class="psModalHead"><div><b>Account &amp; Plans</b><span>Manage your account, access and subscription in one place.</span></div><button class="psClose" onclick="psClose('psAccountModal')">×</button></div><div class="psModalBody">
+    <div class="psAccount"><div class="psAccountCard"><b>Account</b><p id="psAccountEmail">Signed in account</p></div><div class="psAccountCard"><b>Access</b><p>Owner / VIP access is controlled separately from the customer subscription.</p></div></div>
+    <div class="psPlans"><div class="psPlan"><h3>Standard</h3><div class="psPrice">Free</div><p>For getting started with Panic Scanner.</p><ul><li>Core stock/company search</li><li>Standard reaction analysis</li><li>Basic interactive charts</li></ul><button onclick="psPlan('Standard')">Current / Start</button></div><div class="psPlan featured"><h3>Pro</h3><div class="psPrice">Premium</div><p>For deeper research and repeat workflows.</p><ul><li>Deeper investigation tools</li><li>Expanded research workflow</li><li>More history and saved work</li></ul><button onclick="psPlan('Pro')">Choose Pro</button></div><div class="psPlan elite"><h3>Elite</h3><div class="psPrice">Premium+</div><p>For the complete Panic Scanner experience.</p><ul><li>Elite Market Reaction Map</li><li>Stress &amp; recovery context</li><li>Maximum research access</li></ul><button onclick="psPlan('Elite')">Choose Elite</button></div></div>
+    <div class="psPromo"><label>Redeem a promo / access code</label><div class="psPromoRow"><input id="psPromoCode" placeholder="Enter code"><button onclick="psRedeem()">Redeem</button></div><div id="psPromoResult" style="margin-top:7px;color:#8490a4;font-size:8px"></div></div>
+  </div></div></div>
+  <div class="psModal" id="psSettingsModal"><div class="psModalShell"><div class="psModalHead"><div><b>Settings</b><span>Your app preferences — completely separate from Account &amp; Plans.</span></div><button class="psClose" onclick="psClose('psSettingsModal')">×</button></div><div class="psModalBody"><div class="psSettingsGrid">
+    <div class="psSettingGroup"><h3>Experience</h3><div class="psSetting"><div><b>Sound effects</b><p>Interface feedback sounds.</p></div><button id="psSound" class="psToggle on" onclick="psToggle('sound','psSound')"><i></i></button></div><div class="psSetting"><div><b>Volume</b><p>Interface sound volume.</p></div><input id="psVolume" class="psRange" type="range" min="0" max="100" value="70" oninput="psSave('volume',this.value)"></div><div class="psSetting"><div><b>Haptic feedback</b><p>Light mobile feedback.</p></div><button id="psHaptic" class="psToggle on" onclick="psToggle('haptic','psHaptic')"><i></i></button></div><div class="psSetting"><div><b>Reduce motion</b><p>Reduce animations.</p></div><button id="psMotion" class="psToggle" onclick="psToggle('motion','psMotion')"><i></i></button></div></div>
+    <div class="psSettingGroup"><h3>Charts &amp; research</h3><div class="psSetting"><div><b>Default range</b><p>Initial chart history.</p></div><select id="psRange" class="psSelect" onchange="psSave('range',this.value)"><option>20</option><option>40</option><option selected>60</option><option value="all">All</option></select></div><div class="psSetting"><div><b>Auto-open analysis</b><p>Open research after selecting a result.</p></div><button id="psAuto" class="psToggle on" onclick="psToggle('auto','psAuto')"><i></i></button></div><div class="psSetting"><div><b>Remember recent searches</b><p>Save recent searches on this device.</p></div><button id="psHistory" class="psToggle on" onclick="psToggle('history','psHistory')"><i></i></button></div></div>
+    <div class="psSettingGroup"><h3>Notifications</h3><div class="psSetting"><div><b>Market alerts</b><p>Allow supported market notifications.</p></div><button id="psAlerts" class="psToggle on" onclick="psToggle('alerts','psAlerts')"><i></i></button></div><div class="psSetting"><div><b>News alerts</b><p>Allow supported news notifications.</p></div><button id="psNews" class="psToggle on" onclick="psToggle('news','psNews')"><i></i></button></div></div>
+    <div class="psSettingGroup"><h3>Privacy &amp; safety</h3><div class="psSetting"><div><b>Clear local preferences</b><p>Remove saved app settings from this device.</p></div><button class="psClose" onclick="psReset()">Reset</button></div><div class="psSetting"><div><b>Research disclaimer</b><p>Analysis is informational and does not guarantee outcomes.</p></div><span style="font-size:9px;color:#35d59d">Shown</span></div></div>
+  </div></div></div>`;
+  html=html.replace('</body>',modals+interaction+'</body>');
 
-  // Add robust mobile long-press/copy prevention after the existing app script.
-  html = html.replace(
-    '</script></body></html>',
-    `
-    const DEFAULT_SETTINGS={sound:true,soundVolume:70,haptic:true,reduceMotion:false,compact:false,defaultRange:'60',autoAnalysis:true,decimals:'auto',alerts:true,newsAlerts:true,history:true};
-    function readSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStorage.getItem('psSettings')||'{}')}}catch(e){return {...DEFAULT_SETTINGS}}}
-    function writeSettings(s){localStorage.setItem('psSettings',JSON.stringify(s))}
-    function syncSettings(){const s=readSettings();[['sound','soundToggle'],['haptic','hapticToggle'],['reduceMotion','motionToggle'],['compact','compactToggle'],['autoAnalysis','autoAnalysisToggle'],['alerts','alertsToggle'],['newsAlerts','newsToggle'],['history','historyToggle']].forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.classList.toggle('on',!!s[k])});const v=document.getElementById('soundVolume');if(v)v.value=s.soundVolume;const r=document.getElementById('defaultRange');if(r)r.value=s.defaultRange;const d=document.getElementById('decimals');if(d)d.value=s.decimals;document.documentElement.classList.toggle('reduce-motion',!!s.reduceMotion);document.documentElement.classList.toggle('compact-mode',!!s.compact)}
-    function saveSetting(k,v){const s=readSettings();s[k]=['soundVolume'].includes(k)?Number(v):v;writeSettings(s);syncSettings()}
-    function toggleSetting(k){const s=readSettings();s[k]=!s[k];writeSettings(s);syncSettings();if(s.haptic&&navigator.vibrate)navigator.vibrate(8)}
-    function resetSettings(){writeSettings({...DEFAULT_SETTINGS});syncSettings();toast('Settings reset to defaults.')}
-    function openSettings(){closeDrawer();$('settingsPanel').classList.add('open');syncSettings();document.body.style.overflow='hidden'}
-    function closeSettings(){$('settingsPanel').classList.remove('open');document.body.style.overflow=''}
-    function openAccountPlans(){closeSettings();openDrawer()}
-    const psMobile=window.matchMedia('(max-width:620px)');
-    function blockMobileCopy(e){if(psMobile.matches&&!e.target.matches('input,textarea,[contenteditable="true"]'))e.preventDefault()}
-    ['copy','cut','contextmenu','dragstart','selectstart'].forEach(type=>document.addEventListener(type,blockMobileCopy,{capture:true}));
-    document.addEventListener('touchstart',e=>{if(psMobile.matches&&e.target.closest('.interactiveChart,.eliteChart')){e.stopPropagation()}},{passive:true,capture:true});
-    syncSettings();
-    </script></body></html>`
-  );
+  const js=`<script>
+  (()=>{
+    const key='psProfessionalSettings';
+    const defaults={sound:true,haptic:true,motion:false,auto:true,history:true,alerts:true,news:true,volume:70,range:'60'};
+    const read=()=>{try{return {...defaults,...JSON.parse(localStorage.getItem(key)||'{}')}}catch{return {...defaults}}};
+    const write=s=>localStorage.setItem(key,JSON.stringify(s));
+    window.psClose=id=>document.getElementById(id)?.classList.remove('open');
+    window.psOpen=id=>{document.querySelectorAll('.psModal').forEach(x=>x.classList.remove('open'));document.getElementById(id)?.classList.add('open');document.body.style.overflow='hidden';};
+    document.addEventListener('click',e=>{if(e.target.classList.contains('psModal')){e.target.classList.remove('open');document.body.style.overflow=''}});
+    window.psToggle=(k,id)=>{const s=read();s[k]=!s[k];write(s);psSync();if(s.haptic&&navigator.vibrate)navigator.vibrate(8)};
+    window.psSave=(k,v)=>{const s=read();s[k]=k==='volume'?Number(v):v;write(s);psSync()};
+    window.psReset=()=>{write(defaults);psSync()};
+    window.psPlan=p=>{localStorage.setItem('psSelectedPlan',p);alert(p+' selected. Checkout will be connected when payments are enabled.')};
+    window.psRedeem=()=>{const c=(document.getElementById('psPromoCode')?.value||'').trim();const out=document.getElementById('psPromoResult');if(!c){out.textContent='Enter a code first.';return}out.textContent='Code received. Validation is ready to be connected to the account backend.'};
+    function psSync(){const s=read();[['sound','psSound'],['haptic','psHaptic'],['motion','psMotion'],['auto','psAuto'],['history','psHistory'],['alerts','psAlerts'],['news','psNews']].forEach(([k,id])=>document.getElementById(id)?.classList.toggle('on',!!s[k]));const v=document.getElementById('psVolume');if(v)v.value=s.volume;const r=document.getElementById('psRange');if(r)r.value=s.range}
+    // Intercept the existing navigation so the old combined drawer cannot be the user-facing settings experience.
+    document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const t=(b.innerText||'').replace(/\s+/g,' ').trim().toLowerCase();if(t==='settings'||t.includes('settings')){e.preventDefault();e.stopImmediatePropagation();window.psOpen('psSettingsModal')}else if(t==='plans'||t.includes('account & plans')||t==='account'){e.preventDefault();e.stopImmediatePropagation();window.psOpen('psAccountModal')}},{capture:true});
+    // Make the placeholder genuinely generic and remove any hard-coded example ticker from the visible prompt.
+    document.querySelectorAll('input').forEach(i=>{if((i.placeholder||'').toLowerCase().includes('blackrock'))i.placeholder='Search a stock or company'});
+    psSync();
+  })();
+  </script>`;
+  html=html.replace('</script></body></html>',js+'</script></body></html>');
   return html;
 }
 
-module.exports = (req, res) => {
-  const source = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store, max-age=0');
-  res.status(200).send(patch(source));
-};
+module.exports=(req,res)=>{const source=fs.readFileSync(path.join(process.cwd(),'index.html'),'utf8');res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.status(200).send(patch(source));};
