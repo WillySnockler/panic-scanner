@@ -1,106 +1,44 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Panic Scanner — V3</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panic Scanner — V4</title>
 <style>
-:root{--bg:#07090e;--panel:#10141c;--panel2:#0c1017;--line:#232a37;--text:#f6f7fb;--muted:#9099a9;--red:#ff5663;--green:#36d49a;--yellow:#f4c75e;--violet:#9b8cff;--blue:#6b91ff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% -10%,#26314c 0,#07090e 42%);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:1080px;margin:auto;padding:18px 16px 70px}.nav{display:flex;justify-content:space-between;align-items:center}.brand{font-weight:950;letter-spacing:.4px}.badge{background:#1c1931;border:1px solid #51477e;color:#bcb4ff;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900}.hero{padding:48px 0 22px}.eyebrow{font-size:11px;font-weight:950;letter-spacing:1.7px;color:var(--red)}h1{font-size:clamp(43px,7vw,76px);line-height:.94;margin:10px 0 18px;letter-spacing:-2px}.hero p{max-width:760px;color:var(--muted);font-size:18px;line-height:1.55}.search{display:flex;gap:10px;margin-top:26px}.search input{flex:1;min-width:0;background:#0b0f16;border:1px solid var(--line);color:#fff;border-radius:15px;padding:16px;font-size:17px;text-transform:uppercase}.search button,.primary{background:#fff;color:#07090e;border:0;border-radius:15px;padding:0 22px;font-weight:950}.tiny{font-size:12px;color:var(--muted);margin-top:9px}.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:18px}.card{background:rgba(16,20,28,.95);border:1px solid var(--line);border-radius:21px;padding:21px}.top{display:flex;justify-content:space-between;gap:18px}.ticker{font-size:31px;font-weight:950}.company{color:var(--muted);margin-top:4px}.price{text-align:right;font-size:28px;font-weight:950}.move{text-align:right;font-weight:900;margin-top:3px}.red{color:var(--red)}.green{color:var(--green)}.yellow{color:var(--yellow)}.score{font-size:65px;font-weight:950;line-height:1;margin-top:25px}.score small{font-size:23px}.bar{height:9px;background:#232a37;border-radius:99px;overflow:hidden;margin:12px 0 19px}.fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--red))}.pill{display:inline-block;padding:7px 11px;border-radius:999px;background:#2b1d21;color:#ff9ba3;font-size:12px;font-weight:950}.row{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-top:1px solid var(--line)}.row span{color:var(--muted)}.chart{height:390px;border-radius:15px;overflow:hidden;background:#0a0e14}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}.section-title h2{margin:0}.probox{background:linear-gradient(135deg,#18152a,#10141c);border-color:#443a73}.probox h2{margin:0 0 7px}.probox p{color:#bfc4cf;line-height:1.55}.pro-list{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0}.pro-item{border:1px solid #302a50;background:#141323;border-radius:12px;padding:11px;font-size:13px}.locked{position:relative;min-height:210px;overflow:hidden;border-radius:15px;background:#0b0f15}.fake-chart{height:210px;opacity:.42;background:linear-gradient(145deg,transparent 55%,#1b273c 55%,#1b273c 56%,transparent 56%),repeating-linear-gradient(0deg,#0b0f15 0,#0b0f15 39px,#111722 40px)}.lockfade{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;background:linear-gradient(180deg,rgba(7,9,14,.1),rgba(7,9,14,.95))}.lockfade b{font-size:18px}.lockfade p{color:#aeb5c2;font-size:13px;max-width:380px}.watch{display:flex;flex-wrap:wrap;gap:8px}.stock{background:#0c1017;border:1px solid var(--line);color:#fff;border-radius:11px;padding:10px 12px;font-weight:850}.callout{border:1px solid #443a20;background:#1b1810;color:#e7cf8c;border-radius:14px;padding:13px;font-size:13px;line-height:1.5;margin-top:14px}.footer{font-size:11px;color:#697386;line-height:1.5;margin-top:20px}@media(max-width:760px){.grid{grid-template-columns:1fr}.pro-list{grid-template-columns:1fr}.hero{padding-top:35px}.search button{padding:0 16px}.chart{height:330px}}
+:root{--bg:#07090e;--panel:#10141c;--line:#252d3b;--text:#f5f7fb;--muted:#929aaa;--red:#ff5967;--green:#39d49b;--yellow:#f3c45e;--blue:#7b9cff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% -10%,#26314c 0,#07090e 45%);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:1080px;margin:auto;padding:22px 16px 70px}.nav{display:flex;justify-content:space-between;align-items:center}.brand{font-weight:950;letter-spacing:.5px}.badge{background:#1d1931;border:1px solid #554a84;color:#c3baff;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900}.hero{padding:52px 0 24px}.eyebrow{font-size:11px;font-weight:950;letter-spacing:1.8px;color:var(--red)}h1{font-size:clamp(46px,8vw,78px);line-height:.92;margin:10px 0 18px;letter-spacing:-3px}.hero p{max-width:760px;color:var(--muted);font-size:18px;line-height:1.55}.search{display:flex;gap:10px;margin-top:26px}.search input{flex:1;min-width:0;background:#0b0f16;border:1px solid var(--line);color:#fff;border-radius:15px;padding:16px;font-size:17px;text-transform:uppercase}.search button{background:#fff;color:#07090e;border:0;border-radius:15px;padding:0 22px;font-weight:950}.tiny{font-size:12px;color:var(--muted);margin-top:9px}.card{background:rgba(16,20,28,.96);border:1px solid var(--line);border-radius:21px;padding:21px;margin-top:18px}.matches .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line)}.matches .row:first-child{border-top:0}.open{background:#fff;color:#080a0f;border:0;border-radius:10px;padding:9px 13px;font-weight:900}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.top{display:flex;justify-content:space-between;gap:18px}.ticker{font-size:32px;font-weight:950}.company,.muted{color:var(--muted)}.price{text-align:right;font-size:30px;font-weight:950}.move{text-align:right;font-weight:900;margin-top:3px}.red{color:var(--red)}.green{color:var(--green)}.score{font-size:68px;font-weight:950;line-height:1;margin-top:25px}.score small{font-size:23px}.bar{height:9px;background:#252d3b;border-radius:99px;overflow:hidden;margin:12px 0 18px}.fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--red));width:0}.pill{display:inline-block;padding:7px 11px;border-radius:999px;background:#2b1d21;color:#ff9ba3;font-size:12px;font-weight:950}.rows{margin-top:14px}.row{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-top:1px solid var(--line)}.chart{height:280px;display:flex;align-items:flex-end;gap:2px;padding:12px 0}.barc{flex:1;min-width:2px;border-radius:3px 3px 0 0;background:#6f86c9}.barc.down{background:#b85b68}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.notice{color:#c8ced9;line-height:1.55}.foot{font-size:11px;color:#697386;line-height:1.5;margin-top:20px}@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{padding-top:36px}.search button{padding:0 16px}.top{gap:10px}.price{font-size:24px}}
 </style>
 </head>
-<body>
-<div class="wrap">
-<header class="nav"><div class="brand">PANIC SCANNER</div><div class="badge">PRO RESEARCH</div></header>
-
-<section class="hero">
-<div class="eyebrow">MARKET OVERREACTION RESEARCH</div>
-<h1>Find fear.<br>Challenge the panic.</h1>
-<p>A calmer way to investigate sudden selloffs. See the market, understand the story, then test whether the business actually changed.</p>
-<div class="search"><input id="ticker" placeholder="Search a stock — INTU" maxlength="10"><button onclick="scan()">Analyze</button></div>
-<div class="tiny" id="usage">Standard · 3 deep scans today</div>
-</section>
-
+<body><div class="wrap">
+<header class="nav"><div class="brand">PANIC SCANNER</div><div class="badge">REAL DATA V4</div></header>
+<section class="hero"><div class="eyebrow">MARKET OVERREACTION RESEARCH</div><h1>Find fear.<br>Challenge the panic.</h1><p>Search a company or ticker. Panic Scanner now resolves symbols and pulls market data through a private server-side API key.</p><div class="search"><input id="q" placeholder="Search a stock — BlackRock or BLK" maxlength="30"><button onclick="searchStocks()">Search</button></div><div class="tiny">Research signal only · not financial advice</div></section>
+<div class="card matches" id="matchesCard" style="display:none"><div class="section-title"><h2>Matches</h2><span class="muted">Select a security</span></div><div id="matches"></div></div>
+<div class="card" id="loading" style="display:none"><p>Loading real market data…</p></div>
 <div id="result" style="display:none">
 <div class="grid">
-<section class="card">
-<div class="top"><div><div class="ticker" id="t">INTU</div><div class="company" id="c">Intuit</div></div><div><div class="price" id="p">$319.49</div><div class="move red" id="m">-10.62%</div></div></div>
-<div class="score" id="s">82<small>/100</small></div><div class="company">Panic / overreaction score</div>
-<div class="bar"><div class="fill" id="fill" style="width:82%"></div></div>
-<span class="pill" id="verdict">POSSIBLE OVERREACTION</span>
-<div style="margin-top:16px">
-<div class="row"><span>Why fear?</span><b id="reason">Growth-guidance shock</b></div>
-<div class="row"><span>Business health</span><b id="biz">Still growing</b></div>
-<div class="row"><span>Risk</span><b id="risk">Slower growth / customers</b></div>
-<div class="row"><span>Next catalyst</span><b id="cat">Investor Day</b></div>
+<section class="card"><div class="top"><div><div class="ticker" id="ticker"></div><div class="company" id="company"></div></div><div><div class="price" id="price"></div><div class="move" id="move"></div></div></div><div class="score"><span id="score">0</span><small>/100</small></div><div class="company">Panic / overreaction heuristic</div><div class="bar"><div class="fill" id="fill"></div></div><span class="pill" id="verdict"></span><div class="rows"><div class="row"><span>RSI (14)</span><b id="rsi">—</b></div><div class="row"><span>20-day SMA</span><b id="sma20">—</b></div><div class="row"><span>50-day SMA</span><b id="sma50">—</b></div><div class="row"><span>20-day drawdown</span><b id="dd">—</b></div><div class="row"><span>Volume</span><b id="volume">—</b></div></div></section>
+<section class="card"><div class="section-title"><h2>Price history</h2><span class="muted">Recent sessions</span></div><div class="chart" id="chart"></div><p class="notice">The score is a transparent heuristic based on the daily move, RSI, moving-average position and recent drawdown. It does <b>not</b> establish that a stock is undervalued or a good buy.</p></section>
+</div></div>
+<div class="foot">Market data supplied by Alpha Vantage. Free access has usage limits; realtime US quotes require the appropriate entitlement. API key is kept server-side in Vercel.</div>
 </div>
-<div class="callout">Standard shows the signal. <b>Pro shows the evidence behind the signal.</b></div>
-</section>
-
-<section class="card">
-<div class="section-title"><h2>Price</h2><span class="company">Inside Panic Scanner</span></div>
-<div class="chart" id="chart"></div>
-</section>
-</div>
-
-<div class="grid">
-<section class="card">
-<div class="section-title"><h2>🧠 Thesis Challenger</h2><span class="badge">Standard</span></div>
-<p id="thesis" style="line-height:1.65;color:#c7ccd6">The market reaction looks larger than the immediate business change. But the full bull/bear evidence is locked.</p>
-<div class="locked">
-<div class="fake-chart"></div>
-<div class="lockfade"><div><b>See the Overreaction Gap</b><p>Compare the stock's move against earnings, growth, valuation and historical reactions.</p><button class="primary" onclick="pro()">Unlock with Pro</button></div></div>
-</div>
-</section>
-
-<section class="card probox">
-<h2>💎 Pro</h2><p>For people who want the whole investigation—not just the headline.</p>
-<div class="pro-list">
-<div class="pro-item">📊 Full financials</div><div class="pro-item">📈 Technicals</div>
-<div class="pro-item">🩸 Overreaction Gap</div><div class="pro-item">🐂 Bull vs Bear</div>
-<div class="pro-item">🎯 Valuation</div><div class="pro-item">🚨 Alerts</div>
-</div>
-<button class="primary" style="padding:12px 16px" onclick="pro()">Explore Pro</button>
-</section>
-</div>
-</div>
-
-<section class="card" style="margin-top:18px">
-<div class="section-title"><h2>🩸 Panic List</h2><span class="company">Candidates to investigate</span></div>
-<div class="watch">
-<button class="stock" onclick="load('INTU')">INTU · Intuit</button>
-<button class="stock" onclick="load('CRWD')">CRWD · CrowdStrike</button>
-<button class="stock" onclick="load('DDOG')">DDOG · Datadog</button>
-<button class="stock" onclick="load('CLBT')">CLBT · Cellebrite</button>
-<button class="stock" onclick="load('MP')">MP · MP Materials</button>
-</div>
-</section>
-
-<div class="footer">V3 concept prototype. Demo analysis values are illustrative. Production launch requires licensed market-data/news access, a secure backend and appropriate financial-product/legal review. Research and decision support only.</div>
-</div>
-
 <script>
-const data={
-INTU:{name:"Intuit",price:"$319.49",move:"-10.62%",score:82,verdict:"POSSIBLE OVERREACTION",reason:"Growth-guidance shock",biz:"Still growing",risk:"Slower growth / customers",cat:"Investor Day",thesis:"The market reaction looks larger than the immediate business change. The next question is whether long-term earnings power has fallen as much as the share price."},
-CRWD:{name:"CrowdStrike",price:"Live chart",move:"WATCH",score:68,verdict:"INVESTIGATE",reason:"AI / cybersecurity fears",biz:"Growth business",risk:"Competition / valuation",cat:"Next earnings",thesis:"Test whether AI changes the moat or makes cybersecurity more valuable."},
-DDOG:{name:"Datadog",price:"Live chart",move:"WATCH",score:64,verdict:"INVESTIGATE",reason:"Software / AI fears",biz:"Growth business",risk:"Growth slowdown",cat:"Next earnings",thesis:"Test whether AI reduces observability spend or increases monitoring demand."},
-CLBT:{name:"Cellebrite",price:"Live chart",move:"WATCH",score:61,verdict:"INVESTIGATE",reason:"Earnings selloff",biz:"Specialized software",risk:"Execution",cat:"Next earnings",thesis:"Large post-earnings drops can create opportunities, but execution risk matters more in smaller businesses."},
-MP:{name:"MP Materials",price:"$57.42",move:"WATCH",score:57,verdict:"LONG-TERM THESIS",reason:"Rare-earth / magnet theme",biz:"Scaling",risk:"Execution / commodity prices",cat:"Capacity expansion",thesis:"Magnet demand may benefit from robotics and electrification, but execution and valuation remain key."}
-};
-let uses=Number(localStorage.getItem('psv3_uses')||0), day=localStorage.getItem('psv3_day'), today=new Date().toISOString().slice(0,10);
-if(day!==today){uses=0;localStorage.setItem('psv3_day',today);localStorage.setItem('psv3_uses','0')}
-function load(x){document.getElementById('ticker').value=x;scan()}
-function scan(){
- if(uses>=3){document.getElementById('usage').innerHTML='<b>Standard daily scans used.</b> Pro unlocks unlimited scans.';pro();return}
- let x=document.getElementById('ticker').value.trim().toUpperCase();if(!x)return;
- uses++;localStorage.setItem('psv3_uses',uses);
- let d=data[x]||{name:x,price:"Live chart",move:"WATCH",score:0,verdict:"NEEDS LIVE DATA",reason:"No demo profile",biz:"—",risk:"—",cat:"—",thesis:"The production backend will connect licensed quotes, fundamentals, news and AI analysis."};
- document.getElementById('result').style.display='block';document.getElementById('t').textContent=x;document.getElementById('c').textContent=d.name;document.getElementById('p').textContent=d.price;document.getElementById('m').textContent=d.move;document.getElementById('s').innerHTML=d.score+'<small>/100</small>';document.getElementById('fill').style.width=d.score+'%';document.getElementById('verdict').textContent=d.verdict;document.getElementById('reason').textContent=d.reason;document.getElementById('biz').textContent=d.biz;document.getElementById('risk').textContent=d.risk;document.getElementById('cat').textContent=d.cat;document.getElementById('thesis').textContent=d.thesis;document.getElementById('usage').textContent=`Standard · ${3-uses} deep ${3-uses===1?'scan':'scans'} left today`;renderChart(x)
+const $=id=>document.getElementById(id);
+async function searchStocks(){
+ const q=$('q').value.trim(); if(!q)return;
+ $('matchesCard').style.display='block'; $('matches').innerHTML='<p class="muted">Searching…</p>';
+ try{const r=await fetch('/api/search?q='+encodeURIComponent(q));const d=await r.json();if(!r.ok)throw Error(d.error||'Search failed');
+ $('matches').innerHTML=d.matches.map(m=>`<div class="row"><div><b>${esc(m.symbol)}</b> · ${esc(m.name)}<br><small class="muted">${esc(m.region||'')} · ${esc(m.currency||'')}</small></div><button class="open" onclick="loadStock('${escAttr(m.symbol)}','${escAttr(m.name)}')">Analyze</button></div>`).join('')||'<p class="muted">No matches found.</p>';
+ }catch(e){$('matches').innerHTML='<p class="red">'+esc(e.message)+'</p>'}
 }
-function renderChart(symbol){
- let el=document.getElementById('chart');el.innerHTML='';let s=document.createElement('script');s.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';s.async=true;s.innerHTML=JSON.stringify({autosize:true,symbol:symbol,interval:"D",timezone:"Etc/UTC",theme:"dark",style:"1",locale:"en",allow_symbol_change:false,hide_top_toolbar:false,hide_legend:false,save_image:false,calendar:false,support_host:"https://www.tradingview.com"});el.appendChild(s)
+async function loadStock(symbol,name){
+ $('loading').style.display='block';$('result').style.display='none';
+ try{const r=await fetch('/api/stock?symbol='+encodeURIComponent(symbol));const d=await r.json();if(!r.ok)throw Error(d.error||'Stock data failed');
+ $('ticker').textContent=d.symbol;$('company').textContent=name;$('price').textContent=fmt(d.price);$('move').textContent=(d.change>=0?'+':'')+fmt(d.change)+' ('+d.changePercent+')';$('move').className='move '+(d.change>=0?'green':'red');
+ $('score').textContent=d.panic.score;$('fill').style.width=d.panic.score+'%';$('verdict').textContent=d.panic.verdict;
+ $('rsi').textContent=num(d.technicals.rsi14);$('sma20').textContent=fmt(d.technicals.sma20);$('sma50').textContent=fmt(d.technicals.sma50);$('dd').textContent=num(d.technicals.drawdown20)+'%';$('volume').textContent=d.volume?.toLocaleString()||'—';
+ draw(d.history);$('result').style.display='block';window.scrollTo({top:$('result').offsetTop-15,behavior:'smooth'});
+ }catch(e){alert(e.message)}finally{$('loading').style.display='none'}
 }
-function pro(){alert("Pro checkout comes after the secure backend and payment system are connected.")}
-</script>
-</body>
-</html>
+function draw(rows){const c=$('chart');c.innerHTML='';if(!rows?.length)return;const closes=rows.map(x=>x.close);const min=Math.min(...closes),max=Math.max(...closes),range=max-min||1;rows.forEach((x,i)=>{const b=document.createElement('div');b.className='barc '+(i&&x.close<rows[i-1].close?'down':'');b.style.height=(18+((x.close-min)/range)*82)+'%';b.title=x.date+' · '+fmt(x.close);c.appendChild(b)})}
+function fmt(x){return x==null?'—':Number(x).toLocaleString(undefined,{maximumFractionDigits:2})}function num(x){return x==null?'—':Number(x).toFixed(1)}function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function escAttr(x){return esc(x).replace(/`/g,'&#96;')}
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter')searchStocks()});
+</script></body></html>
