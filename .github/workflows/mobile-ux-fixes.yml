@@ -1,0 +1,61 @@
+name: Mobile UX fixes
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !startsWith(github.event.head_commit.message, 'fix: mobile chart UX') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply mobile chart fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+
+          # Mobile: prevent long-press selection/copy while preserving form-field editing.
+          old = '@media(max-width:620px){.side{top:auto;right:0;width:100%;height:68px;bottom:0;flex-direction:row;justify-content:space-around;border-right:0;border-top:1px solid var(--line);padding:7px;z-index:100}'
+          new = '@media(max-width:620px){body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}.side{top:auto;right:0;width:100%;height:68px;bottom:0;flex-direction:row;justify-content:space-around;border-right:0;border-top:1px solid var(--line);padding:7px;z-index:100}'
+          if old not in s:
+              raise SystemExit('mobile CSS anchor not found')
+          s = s.replace(old, new, 1)
+
+          # Keep chart readouts away from the finger on mobile; top-right is a stable, non-touch area.
+          old = '.chartTip,.eliteTip{min-width:160px}.authBox{padding:26px}}'
+          new = '.chartTip,.eliteTip{min-width:160px;left:auto!important;right:10px!important;top:10px!important;max-width:calc(100% - 20px)}.authBox{padding:26px}}'
+          if old not in s:
+              raise SystemExit('mobile tooltip CSS anchor not found')
+          s = s.replace(old, new, 1)
+
+          # Desktop/tablet tooltip fallback: still avoid sitting directly over the selected point.
+          old = "tip.style.left=Math.max(8,Math.min(r.width-205,x+14))+'px';tip.style.top=Math.max(8,Math.min(r.height-100,best.y/330*r.height-55))+'px'"
+          new = "tip.style.left='auto';tip.style.right='10px';tip.style.top='10px'"
+          if old not in s:
+              raise SystemExit('tooltip positioning anchor not found')
+          s = s.replace(old, new, 1)
+
+          # Elite labels: separate the stress/recovery captions so they never overlap when the zones are close.
+          old = "<text x=\"${Math.min(W-190,sx+8)}\" y=\"55\" fill=\"#ff8794\" class=\"eliteLabel\">MARKET STRESS</text><text x=\"${Math.min(W-180,rx+8)}\" y=\"55\" fill=\"#58e3b2\" class=\"eliteLabel\">RECOVERY WATCH</text>"
+          new = "<text x=\"${Math.max(12,Math.min(W-190,sx-118))}\" y=\"55\" fill=\"#ff8794\" class=\"eliteLabel\">MARKET STRESS</text><text x=\"${Math.max(12,Math.min(W-180,rx+10))}\" y=\"55\" fill=\"#58e3b2\" class=\"eliteLabel\">RECOVERY WATCH</text>"
+          if old not in s:
+              raise SystemExit('elite label anchor not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "fix: mobile chart UX"
+          git push
