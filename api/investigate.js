@@ -7,7 +7,8 @@ export default async function handler(request, response) {
   if (!key) return response.status(500).json({ error: "ALPHA_VANTAGE_API_KEY is not configured in Vercel." });
 
   async function av(functionName, extra = {}) {
-    const params = new URLSearchParams({ function: functionName, apikey: key, symbol, ...extra });
+    const params = new URLSearchParams({ function: functionName, apikey: key, ...extra });
+    if (functionName !== "NEWS_SENTIMENT") params.set("symbol", symbol);
     const r = await fetch(`https://www.alphavantage.co/query?${params.toString()}`);
     const data = await r.json();
     if (data.Note) throw new Error("Market-data API limit reached. Try again later.");
@@ -18,7 +19,7 @@ export default async function handler(request, response) {
   try {
     const [overview, news] = await Promise.all([
       av("OVERVIEW"),
-      av("NEWS_SENTIMENT", { limit: depth === "elite" ? "12" : "6", sort: "LATEST" })
+      av("NEWS_SENTIMENT", { tickers: symbol, limit: depth === "elite" ? "12" : "6", sort: "LATEST" })
     ]);
 
     let income = null;
@@ -36,15 +37,11 @@ export default async function handler(request, response) {
       summary: a.summary
     }));
 
-    const q = arr => arr.map(Number).filter(Number.isFinite);
-    const annual = q((income?.annualReports || []).slice(0, 5).map(x => x.eps || x.netIncome || x.totalRevenue));
-    const revenue = q((income?.annualReports || []).slice(0, 5).map(x => x.totalRevenue));
-    const eps = q((income?.annualReports || []).slice(0, 5).map(x => x.eps));
-
+    const revenue = (income?.annualReports || []).slice(0, 5).map(x => Number(x.totalRevenue)).filter(Number.isFinite);
+    const eps = (income?.annualReports || []).slice(0, 5).map(x => Number(x.eps)).filter(Number.isFinite);
     const avgNews = articles.length ? articles.reduce((s, a) => s + a.score, 0) / articles.length : 0;
     const positiveNews = articles.filter(a => /positive|bullish/i.test(a.sentiment)).length;
     const negativeNews = articles.filter(a => /negative|bearish/i.test(a.sentiment)).length;
-
     const revenueGrowth = revenue.length >= 2 && revenue[1] ? ((revenue[0] - revenue[1]) / Math.abs(revenue[1])) * 100 : null;
     const epsGrowth = eps.length >= 2 && eps[1] ? ((eps[0] - eps[1]) / Math.abs(eps[1])) * 100 : null;
 
@@ -56,35 +53,20 @@ export default async function handler(request, response) {
     quality = Math.max(0, Math.min(100, Math.round(quality)));
 
     const fundamentals = {
-      sector: overview.Sector || "—",
-      industry: overview.Industry || "—",
-      description: overview.Description || "",
-      marketCap: overview.MarketCapitalization || null,
-      pe: overview.PERatio || null,
-      peg: overview.PEGRatio || null,
-      eps: overview.EPS || null,
-      revenueTTM: overview.RevenueTTM || null,
-      profitMargin: overview.ProfitMargin || null,
-      operatingMargin: overview.OperatingMarginTTM || null,
-      beta: overview.Beta || null,
-      dividendYield: overview.DividendYield || null,
-      revenueGrowth,
-      epsGrowth
+      sector: overview.Sector || "—", industry: overview.Industry || "—", description: overview.Description || "",
+      marketCap: overview.MarketCapitalization || null, pe: overview.PERatio || null, peg: overview.PEGRatio || null,
+      eps: overview.EPS || null, revenueTTM: overview.RevenueTTM || null, profitMargin: overview.ProfitMargin || null,
+      operatingMargin: overview.OperatingMarginTTM || null, beta: overview.Beta || null, dividendYield: overview.DividendYield || null,
+      revenueGrowth, epsGrowth
     };
-
     const verdict = quality >= 70 ? "Fundamentals look resilient" : quality <= 35 ? "Fundamentals show meaningful weakness" : "Fundamentals are mixed";
 
     return response.status(200).json({
-      symbol,
-      depth,
-      generatedAt: new Date().toISOString(),
-      company: overview.Name || symbol,
-      fundamentals,
+      symbol, depth, generatedAt: new Date().toISOString(), company: overview.Name || symbol, fundamentals,
       news: { articles, averageSentiment: avgNews, positive: positiveNews, negative: negativeNews },
       earnings: depth === "elite" ? { annualReports: income?.annualReports || [], eps, revenue } : null,
       investigation: {
-        quality,
-        verdict,
+        quality, verdict,
         steps: [
           { id: "market", label: "Market reaction", status: "complete", detail: "Price and panic signal reviewed." },
           { id: "technical", label: "Technical condition", status: "complete", detail: "Momentum and trend context reviewed." },
