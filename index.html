@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panic Scanner — MVP</title>
+<style>
+:root{--bg:#080a0f;--card:#11151d;--muted:#8e98a8;--text:#f5f7fb;--line:#222936;--accent:#ff4d5a;--green:#36d399;--yellow:#f5c451}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% -10%,#20283a 0,#080a0f 40%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{max-width:980px;margin:auto;padding:28px 18px 60px}.brand{font-weight:800;letter-spacing:.3px;font-size:18px}.hero{padding:54px 0 30px}.hero h1{font-size:clamp(38px,7vw,70px);line-height:.98;margin:0 0 18px;max-width:760px}.hero p{color:var(--muted);font-size:18px;max-width:680px;line-height:1.55}.search{display:flex;gap:10px;margin:28px 0 14px}.search input{flex:1;background:#0d1118;border:1px solid var(--line);color:white;border-radius:14px;padding:16px;font-size:17px;text-transform:uppercase}.search button{border:0;border-radius:14px;background:var(--text);color:#080a0f;padding:0 22px;font-weight:800;font-size:16px}.hint{color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:28px}.card{background:rgba(17,21,29,.9);border:1px solid var(--line);border-radius:20px;padding:22px}.top{display:flex;justify-content:space-between;gap:15px;align-items:start}.ticker{font-size:30px;font-weight:850}.company{color:var(--muted);margin-top:4px}.price{font-size:28px;font-weight:800;text-align:right}.drop{color:var(--accent);font-weight:800;text-align:right;margin-top:4px}.score{font-size:64px;font-weight:900;line-height:1;margin:22px 0 8px}.scorelabel{color:var(--muted)}.bar{height:10px;background:#202631;border-radius:99px;overflow:hidden;margin-top:15px}.fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--accent));width:82%}.pill{display:inline-block;padding:7px 11px;border-radius:99px;background:#2a2023;color:#ff9aa2;font-weight:800;font-size:13px}.rows{margin-top:18px}.row{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:14px 0;gap:20px}.row span:first-child{color:var(--muted)}.green{color:var(--green)}.yellow{color:var(--yellow)}.red{color:var(--accent)}h2{margin:0 0 12px}.watch{display:flex;flex-wrap:wrap;gap:9px}.stock{padding:10px 13px;border:1px solid var(--line);border-radius:12px;background:#0d1118;cursor:pointer;color:white}.stock:hover{border-color:#596476}.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:20px}.footer{margin-top:26px;color:#657083;font-size:12px}@media(max-width:720px){.grid{grid-template-columns:1fr}.hero{padding-top:35px}.search button{padding:0 15px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">PANIC SCANNER</div>
+  <section class="hero">
+    <h1>Find fear.<br>Challenge the panic.</h1>
+    <p>Enter a stock and turn a sudden selloff into a structured research question: did the business actually get worse, or did the market overreact?</p>
+    <div class="search">
+      <input id="ticker" placeholder="Enter ticker — e.g. INTU" maxlength="8">
+      <button onclick="scan()">Analyze</button>
+    </div>
+    <div class="hint">MVP demo: INTU, CRWD, DDOG, CLBT and MP have sample profiles.</div>
+  </section>
+
+  <div id="result" class="grid" style="display:none"></div>
+
+  <section class="card" style="margin-top:18px">
+    <h2>🩸 Panic List</h2>
+    <p class="company">Your watchlist of situations where fear may have outrun fundamentals.</p>
+    <div class="watch" style="margin-top:15px">
+      <button class="stock" onclick="load('INTU')">INTU · Intuit</button>
+      <button class="stock" onclick="load('CRWD')">CRWD · CrowdStrike</button>
+      <button class="stock" onclick="load('DDOG')">DDOG · Datadog</button>
+      <button class="stock" onclick="load('CLBT')">CLBT · Cellebrite</button>
+      <button class="stock" onclick="load('MP')">MP · MP Materials</button>
+    </div>
+  </section>
+
+  <div class="footer">Research tool prototype. Scores shown here are illustrative demo data, not live investment advice or a recommendation to buy or sell securities.</div>
+</div>
+<script>
+const db={
+ INTU:{name:"Intuit",price:"$319.49",move:"-10.62%",score:82,verdict:"POSSIBLE OVERREACTION",reason:"Guidance shock / growth reset",business:"Still growing",valuation:"Recheck after selloff",risk:"TurboTax + slower growth",catalyst:"Investor Day",thesis:"Strong established software business, but the market is repricing future growth. The key question is whether the long-term earnings power fell as much as the stock price."},
+ CRWD:{name:"CrowdStrike",price:"—",move:"Watch",score:68,verdict:"INVESTIGATE",reason:"AI disruption fears",business:"High-quality growth",valuation:"Needs live data",risk:"Competition / AI",catalyst:"Next earnings",thesis:"Cybersecurity demand may remain structurally strong even as AI changes the competitive landscape."},
+ DDOG:{name:"Datadog",price:"—",move:"Watch",score:64,verdict:"INVESTIGATE",reason:"AI / software fears",business:"Growth business",valuation:"Needs live data",risk:"Growth slowdown",catalyst:"Next earnings",thesis:"Monitor whether AI-driven efficiency becomes a threat to observability spend or increases the need for monitoring."},
+ CLBT:{name:"Cellebrite",price:"—",move:"Watch",score:61,verdict:"INVESTIGATE",reason:"Earnings selloff",business:"Specialized software",valuation:"Needs live data",risk:"Execution / valuation",catalyst:"Next earnings",thesis:"Large post-earnings moves can create opportunities, but smaller companies carry more execution risk."},
+ MP:{name:"MP Materials",price:"$57.42",move:"Watch",score:57,verdict:"LONG-TERM THESIS",reason:"Magnet / rare-earth theme",business:"Scaling",valuation:"Needs live data",risk:"Execution / commodity prices",catalyst:"Magnet capacity expansion",thesis:"A long-term magnet demand thesis is compelling, but the stock can be volatile and the business is capital intensive."}
+};
+function load(t){document.getElementById('ticker').value=t;scan()}
+function scan(){
+ const t=document.getElementById('ticker').value.trim().toUpperCase();
+ const d=db[t]||{name:"Unknown / live-data connector needed",price:"—",move:"—",score:0,verdict:"NEEDS DATA",reason:"No demo profile",business:"—",valuation:"—",risk:"—",catalyst:"—",thesis:"This prototype needs a market-data connector before it can produce a real-time analysis."};
+ const r=document.getElementById('result'); r.style.display="grid";
+ r.innerHTML=`<div class="card">
+  <div class="top"><div><div class="ticker">${t}</div><div class="company">${d.name}</div></div><div><div class="price">${d.price}</div><div class="${d.move.startsWith('-')?'drop':'green'}">${d.move}</div></div></div>
+  <div class="score">${d.score}<span style="font-size:24px">/100</span></div><div class="scorelabel">Panic / overreaction score</div>
+  <div class="bar"><div class="fill" style="width:${d.score}%"></div></div>
+  <div style="margin-top:20px"><span class="pill">${d.verdict}</span></div>
+  <div class="rows">
+   <div class="row"><span>Why the market is afraid</span><b>${d.reason}</b></div>
+   <div class="row"><span>Business</span><b>${d.business}</b></div>
+   <div class="row"><span>Valuation</span><b>${d.valuation}</b></div>
+   <div class="row"><span>Biggest risk</span><b>${d.risk}</b></div>
+   <div class="row"><span>Next catalyst</span><b>${d.catalyst}</b></div>
+  </div>
+ </div>
+ <div class="card"><h2>AI Thesis Challenger</h2><p style="line-height:1.65">${d.thesis}</p>
+ <h2 style="margin-top:28px">Decision framework</h2>
+ <div class="row"><span>Fear > fundamentals</span><b class="green">Investigate</b></div>
+ <div class="row"><span>Fundamentals deteriorating</span><b class="red">Avoid</b></div>
+ <div class="row"><span>Evidence still unclear</span><b class="yellow">Wait</b></div>
+ <p class="note">The app should never turn a single price drop into an automatic buy. It tests the thesis first.</p></div>`;
+}
+</script>
+</body>
+</html>
