@@ -10,8 +10,8 @@ export default function handler(req, res) {
       navs.forEach(function(n){
         const label=(n.querySelector('span')?.textContent||'').trim().toLowerCase();
         if(label==='watchlist') n.onclick=function(e){e.preventDefault();if(typeof go==='function')go('watchlist');};
-        if(label==='plans') n.onclick=function(e){e.preventDefault();if(window.ps2Open)window.ps2Open('ps2Plans');};
-        if(label==='settings') n.onclick=function(e){e.preventDefault();if(window.ps2Open)window.ps2Open('ps2Settings');};
+        if(label==='plans') n.onclick=function(e){e.preventDefault();if(typeof openModal==='function')openModal('plansModal');};
+        if(label==='settings') n.onclick=function(e){e.preventDefault();if(typeof openModal==='function')openModal('settingsModal');};
       });
     }
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
