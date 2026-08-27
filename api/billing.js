@@ -1,5 +1,3 @@
-const crypto = require('crypto');
-
 const PRICE_KEYS = {
   pro_monthly: 'STRIPE_PRO_MONTHLY_PRICE_ID',
   pro_yearly: 'STRIPE_PRO_YEARLY_PRICE_ID',
@@ -7,8 +5,20 @@ const PRICE_KEYS = {
   elite_yearly: 'STRIPE_ELITE_YEARLY_PRICE_ID'
 };
 
+// Public Stripe Price IDs are safe to keep as fallbacks. Secrets remain in Vercel env vars.
+const LIVE_PRICE_IDS = {
+  pro_monthly: 'price_1U92lgFtHbX5g2cNheuq287q',
+  pro_yearly: 'price_1U92lxFtHbX5g2cNxIhkfCxu',
+  elite_monthly: 'price_1U92m3FtHbX5g2cNDbC1UY4n',
+  elite_yearly: 'price_1U92mAFtHbX5g2cNWNlHirbK'
+};
+
 function env(name) {
   return process.env[name];
+}
+
+function configuredPrice(key) {
+  return env(PRICE_KEYS[key]) || LIVE_PRICE_IDS[key];
 }
 
 async function supabaseUser(token) {
@@ -38,11 +48,6 @@ async function stripe(path, body) {
   return data;
 }
 
-function priceId(plan, interval) {
-  const key = PRICE_KEYS[`${plan}_${interval}`];
-  return key ? env(key) : null;
-}
-
 module.exports = async (req, res) => {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -55,9 +60,9 @@ module.exports = async (req, res) => {
 
     if (action === 'config') {
       return res.status(200).json({
-        configured: Boolean(env('STRIPE_SECRET_KEY') && priceId('pro', 'monthly') && priceId('pro', 'yearly') && priceId('elite', 'monthly') && priceId('elite', 'yearly')),
+        configured: Boolean(env('STRIPE_SECRET_KEY') && Object.values(LIVE_PRICE_IDS).every(Boolean)),
         plans: {
-          pro: { monthly: 149, yearly: 1490 },
+          pro: { monthly: 149, yearly: 1499 },
           elite: { monthly: 299, yearly: 2990 }
         }
       });
@@ -66,8 +71,8 @@ module.exports = async (req, res) => {
     if (action === 'checkout') {
       const plan = req.body?.plan === 'elite' ? 'elite' : 'pro';
       const interval = req.body?.interval === 'yearly' ? 'yearly' : 'monthly';
-      const price = priceId(plan, interval);
-      if (!price) return res.status(503).json({ error: 'Stripe prices are not configured yet.' });
+      const price = configuredPrice(`${plan}_${interval}`);
+      if (!price) return res.status(503).json({ error: 'Stripe price is not configured yet.' });
       const origin = req.headers.origin || `https://${req.headers.host}`;
       const session = await stripe('checkout/sessions', {
         mode: 'subscription',
