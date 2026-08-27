@@ -1,0 +1,38 @@
+name: Wire production billing
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wire billing UI
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          s=s.replace("<button onclick=\"enterApp()\">Create account</button>", "<button onclick=\"createAccount()\">Create account</button>")
+          s=s.replace("<button onclick=\"demoLogin()\">Demo</button>", "<button onclick=\"toast('Demo access is disabled. Create a free account to continue.')\">Demo</button>")
+          s=s.replace("<div class=\"price\">Premium</div>", "<div class=\"price\">149 NOK / month</div>")
+          s=s.replace("<div class=\"price\">Premium+</div>", "<div class=\"price\">299 NOK / month</div>")
+          s=s.replace("<button onclick=\"toast('Pro checkout is not connected yet.')\">Choose Pro</button>", "<button onclick=\"startCheckout('pro','monthly')\">Choose Pro · 149 NOK/mo</button>")
+          s=s.replace("<button onclick=\"toast('Elite checkout is not connected yet.')\">Choose Elite</button>", "<button onclick=\"startCheckout('elite','monthly')\">Choose Elite · 299 NOK/mo</button>")
+          if '/billing.js' not in s:
+              s=s.replace('</body>', '<script src="/billing.js"></script>\n</body>')
+          p.write_text(s)
+      - name: Commit wired UI
+        run: |
+          git config user.name 'panic-scanner-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Wire production auth and billing UI'
+          git push
