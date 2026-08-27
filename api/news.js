@@ -17,11 +17,17 @@ export default async function handler(request, response) {
     if (data.Note) return response.status(429).json({ error: 'Market news API limit reached. Try again shortly.' });
     if (data['Error Message']) return response.status(502).json({ error: 'News provider rejected this symbol.' });
 
-    // Alpha Vantage can return a broad feed even when tickers= is supplied.
-    // Keep only articles that explicitly carry sentiment for the requested ticker.
+    // The provider can attach a ticker to broad articles. Require a strong
+    // ticker relevance score or an explicit ticker mention in the article text
+    // so unrelated headlines do not appear in a company's news panel.
+    const tickerPattern = new RegExp(`\\b${symbol.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\b`, 'i');
     const relevant = (data.feed || []).filter(article => {
       const sentiments = Array.isArray(article.ticker_sentiment) ? article.ticker_sentiment : [];
-      return sentiments.some(t => String(t.ticker || '').toUpperCase() === symbol && Number(t.relevance_score || 0) > 0.05);
+      const ts = sentiments.find(t => String(t.ticker || '').toUpperCase() === symbol);
+      if (!ts) return false;
+      const relevance = Number(ts.relevance_score || 0);
+      const text = `${article.title || ''} ${article.summary || ''}`;
+      return relevance >= 0.8 || tickerPattern.test(text);
     });
 
     const articles = relevant.slice(0, 12).map(a => {
