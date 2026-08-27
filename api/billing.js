@@ -7,10 +7,10 @@ const PRICE_KEYS = {
 
 // Public Stripe Price IDs are safe to keep as fallbacks. Secrets remain in Vercel env vars.
 const LIVE_PRICE_IDS = {
-  pro_monthly: 'price_1U92lgFtHbX5g2cNheuq287q',
-  pro_yearly: 'price_1U92lxFtHbX5g2cNxIhkfCxu',
-  elite_monthly: 'price_1U92m3FtHbX5g2cNDbC1UY4n',
-  elite_yearly: 'price_1U92mAFtHbX5g2cNWNlHirbK'
+  pro_monthly: 'price_1U9A81FtHbX5g2cNhHJoTphf',
+  pro_yearly: 'price_1U9A81FtHbX5g2cNiLAxVJqT',
+  elite_monthly: 'price_1U9A82FtHbX5g2cNOGvAF3rN',
+  elite_yearly: 'price_1U9A81FtHbX5g2cNLiLh6TiX'
 };
 
 function env(name) {
