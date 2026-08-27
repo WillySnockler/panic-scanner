@@ -1,42 +1,19 @@
-/* Fix the legacy full-screen login gate so the working Supabase account UI is reachable. */
+/* Panic Scanner: production account authentication + user recognition. */
 (function () {
   'use strict';
-  function hideLegacyAuth() {
-    var legacy = document.getElementById('auth');
-    if (!legacy) return false;
-    legacy.style.display = 'none';
-    legacy.setAttribute('aria-hidden', 'true');
-    return true;
-  }
-
-  function wireLegacyButtons() {
-    var signIn = document.querySelector('#auth .authBtn');
-    var create = document.querySelector('#auth .authAlt button:first-child');
-    var demo = document.querySelector('#auth .authAlt button:last-child');
-    var accountButton = document.querySelector('.psAuthBtn');
-
-    function openAccount() {
-      var btn = document.querySelector('.psAuthBtn');
-      if (btn) btn.click();
-      else setTimeout(openAccount, 150);
-    }
-
-    if (signIn) signIn.onclick = openAccount;
-    if (create) create.onclick = openAccount;
-    if (demo) demo.onclick = openAccount;
-    return !!(signIn || create || demo || accountButton);
-  }
-
-  function boot() {
-    hideLegacyAuth();
-    wireLegacyButtons();
-    var tries = 0;
-    var timer = setInterval(function () {
-      hideLegacyAuth();
-      if (wireLegacyButtons() || ++tries > 40) clearInterval(timer);
-    }, 150);
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  var URL = 'https://xinhpzibmvzqzahcklgy.supabase.co';
+  var KEY = 'sb_publishable_YsqF0jHnjrGY2anRaoH9pg_JKqiPqom';
+  var sb, signup = false;
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+  function client(){if(sb)return Promise.resolve(sb);if(window.supabase&&window.supabase.createClient){sb=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});return Promise.resolve(sb);}return new Promise(function(resolve,reject){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';s.onload=function(){try{sb=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});resolve(sb);}catch(e){reject(e);}};s.onerror=reject;document.head.appendChild(s);});}
+  function ui(){if(document.getElementById('psRealAuth'))return;var d=document.createElement('div');d.id='psRealAuth';d.innerHTML='<style>#psRealAuth{position:fixed;inset:0;z-index:99999;background:rgba(3,6,12,.88);backdrop-filter:blur(18px);display:none;padding:18px;font-family:Inter,system-ui,sans-serif}#psRealAuth.open{display:block}.psra-box{width:min(460px,100%);margin:7vh auto;background:#0b1119;border:1px solid #293448;border-radius:22px;box-shadow:0 30px 120px #000;overflow:hidden}.psra-head{padding:24px;border-bottom:1px solid #202a39}.psra-head b{font-size:21px}.psra-head p{margin:6px 0 0;color:#8490a4;font-size:11px;line-height:1.5}.psra-body{padding:24px}.psra-label{display:block;color:#8c98aa;font-size:9px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;margin:0 0 6px}.psra-input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid #263246;border-radius:11px;background:#070c13;color:#fff;outline:none;margin-bottom:14px}.psra-input:focus{border-color:#8b7cff;box-shadow:0 0 0 3px #8b7cff22}.psra-actions{display:flex;gap:9px}.psra-actions button{flex:1;border:0;border-radius:11px;padding:13px;font-weight:950;cursor:pointer}.psra-primary{background:#8b7cff;color:#fff}.psra-secondary{background:#151d29;color:#fff;border:1px solid #263246!important}.psra-link{display:block;margin-top:14px;background:none;border:0;color:#aeb9cc;font-size:10px;text-decoration:underline;cursor:pointer}.psra-msg{min-height:18px;color:#aeb9cc;font-size:10px;line-height:1.5;margin-top:12px}.ps-user{position:fixed;right:18px;top:84px;z-index:9000;display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid #35d59d44;background:#0d1b19;color:#fff;border-radius:12px;font-size:10px;font-weight:900}.ps-user button{border:0;background:none;color:#8490a4;cursor:pointer;font-weight:900}.ps-user strong{color:#35d59d}</style><div class="psra-box"><div class="psra-head"><b id="psra-title">Welcome to Panic Scanner</b><p id="psra-sub">Sign in to your account and continue where you left off.</p></div><div class="psra-body"><div id="psra-name-wrap" style="display:none"><label class="psra-label">Your name</label><input id="psra-name" class="psra-input" autocomplete="name" placeholder="Your name"></div><label class="psra-label">Email</label><input id="psra-email" class="psra-input" type="email" autocomplete="email" placeholder="you@example.com"><label class="psra-label">Password</label><input id="psra-pass" class="psra-input" type="password" autocomplete="current-password" placeholder="At least 6 characters"><div class="psra-actions"><button id="psra-submit" class="psra-primary">Sign in</button><button id="psra-switch" class="psra-secondary">Create account</button></div><button id="psra-reset" class="psra-link">Forgot password?</button><div id="psra-msg" class="psra-msg"></div></div></div>';document.body.appendChild(d);document.getElementById('psra-submit').onclick=auth;document.getElementById('psra-switch').onclick=function(){setMode(!signup);};document.getElementById('psra-reset').onclick=reset;}
+  function setMode(v){signup=v;var name=document.getElementById('psra-name-wrap');document.getElementById('psra-title').textContent=v?'Create your Panic Scanner account':'Welcome back';document.getElementById('psra-sub').textContent=v?'Create an account so Panic Scanner recognizes you by name and keeps your workspace synced.':'Sign in to your account and continue where you left off.';name.style.display=v?'block':'none';document.getElementById('psra-submit').textContent=v?'Create account':'Sign in';document.getElementById('psra-switch').textContent=v?'I have an account':'Create account';document.getElementById('psra-msg').textContent='';}
+  async function auth(){var msg=document.getElementById('psra-msg'),email=document.getElementById('psra-email').value.trim(),pass=document.getElementById('psra-pass').value,name=document.getElementById('psra-name').value.trim();if(!email||pass.length<6||(signup&&!name)){msg.textContent=signup?'Enter your name, email and a password of at least 6 characters.':'Enter your email and password.';return;}msg.textContent=signup?'Creating account…':'Signing in…';try{var c=await client(),r=signup?await c.auth.signUp({email:email,password:pass,options:{data:{display_name:name,full_name:name},emailRedirectTo:location.origin}}):await c.auth.signInWithPassword({email:email,password:pass});if(r.error)throw r.error;if(signup&&!r.data.session){msg.textContent='Account created. Check your email to confirm it, then sign in.';return;}if(r.data.user){await recognize(r.data.user);document.getElementById('psRealAuth').classList.remove('open');}}catch(e){msg.textContent=e.message||'Could not sign in. Check your email and password.';}}
+  async function recognize(user){var name=(user.user_metadata&&(user.user_metadata.display_name||user.user_metadata.full_name))||((user.email||'').split('@')[0]);try{var p=await sb.from('profiles').select('display_name').eq('id',user.id).maybeSingle();if(p.data&&p.data.display_name)name=p.data.display_name;else await sb.from('profiles').upsert({id:user.id,email:user.email,display_name:name},{onConflict:'id'});}catch(_){}var old=document.getElementById('psUserBadge');if(old)old.remove();var b=document.createElement('div');b.id='psUserBadge';b.className='ps-user';b.innerHTML='<strong>●</strong> Hi, '+esc(name)+' <button id="psSignOut">Sign out</button>';document.body.appendChild(b);document.getElementById('psSignOut').onclick=async function(){await sb.auth.signOut();b.remove();open(false);};}
+  async function reset(){var email=document.getElementById('psra-email').value.trim(),msg=document.getElementById('psra-msg');if(!email){msg.textContent='Enter your email first.';return;}msg.textContent='Sending password reset email…';try{var c=await client(),r=await c.auth.resetPasswordForEmail(email,{redirectTo:location.origin});if(r.error)throw r.error;msg.textContent='Reset email sent. Check your inbox.';}catch(e){msg.textContent=e.message||'Could not send reset email.';}}
+  function open(mode){ui();setMode(mode!==false);document.getElementById('psRealAuth').classList.add('open');}
+  function hideLegacy(){var a=document.getElementById('auth');if(a){a.style.display='none';a.setAttribute('aria-hidden','true');}}
+  function wire(){hideLegacy();var buttons=document.querySelectorAll('#auth button');for(var i=0;i<buttons.length;i++)buttons[i].onclick=function(){var t=(this.textContent||'').toLowerCase();open(t.indexOf('sign')>=0?false:true);};var b=document.querySelector('.psAuthBtn');if(b)b.onclick=function(){open(false);};}
+  async function boot(){ui();wire();try{var c=await client(),r=await c.auth.getUser();if(r.data&&r.data.user)recognize(r.data.user);}catch(_){} }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
