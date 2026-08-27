@@ -1,6 +1,6 @@
 {
   "routes": [
-    { "src": "^/$", "dest": "/api/ux" },
+    { "src": "^/$", "dest": "/api/production" },
     { "handle": "filesystem" }
   ]
 }
