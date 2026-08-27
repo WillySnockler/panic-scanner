@@ -1,5 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/api/ux3" }
+  "routes": [
+    { "src": "^/$", "dest": "/api/ux3" },
+    { "handle": "filesystem" }
   ]
 }
