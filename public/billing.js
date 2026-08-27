@@ -43,6 +43,14 @@
   function patchButtons(){
     document.querySelectorAll('.plan.pro button').forEach(b=>{if(!b.dataset.billing){b.dataset.billing='1';b.textContent='Choose Pro · 149 NOK/mo';b.onclick=()=>startCheckout('pro','monthly')}});
     document.querySelectorAll('.plan.elite button').forEach(b=>{if(!b.dataset.billing){b.dataset.billing='1';b.textContent='Choose Elite · 299 NOK/mo';b.onclick=()=>startCheckout('elite','monthly')}});
+    document.querySelectorAll('.plan').forEach(card=>{
+      if(card.dataset.annual==='1')return;
+      const title=card.querySelector('h3')?.textContent?.trim();
+      if(title==='Pro'||title==='Elite'){
+        card.dataset.annual='1';
+        const b=document.createElement('button');b.className='outline';b.style='width:100%;margin-top:7px';b.textContent=title==='Pro'?'Annual · 1,490 NOK':'Annual · 2,990 NOK';b.onclick=()=>startCheckout(title.toLowerCase(),'yearly');card.appendChild(b);
+      }
+    });
     const modal=document.getElementById('accountModal');if(modal&&!modal.querySelector('[data-manage-billing]')){const p=modal.querySelector('.modalBody');const box=document.createElement('div');box.style='margin-top:14px;display:flex;gap:8px;justify-content:flex-end';box.innerHTML='<button data-manage-billing class="outline">Manage subscription</button><button class="outline" onclick="closeModal(\'accountModal\')">Close</button>';p.appendChild(box);box.querySelector('[data-manage-billing]').onclick=manageBilling;}
     document.querySelectorAll('.plan .price').forEach(x=>{if(x.textContent==='Premium')x.textContent='149 NOK / month';if(x.textContent==='Premium+')x.textContent='299 NOK / month'});
   }
