@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Panic Scanner — Owner Recovery</title>
+<style>
+:root{--bg:#07090f;--panel:#0d131d;--line:#202a39;--text:#f6f8fc;--muted:#8490a4;--purple:#8b7cff;--green:#35d59d;--red:#ff5266}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(900px 500px at 70% 0,#263a6b55,transparent 60%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,sans-serif;display:grid;place-items:center;padding:20px}.box{width:min(460px,100%);background:linear-gradient(180deg,#101722,#0b1018);border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 30px 100px #000}.brand{font-size:11px;font-weight:1000;letter-spacing:1.8px;color:var(--purple);text-transform:uppercase}.box h1{font-size:28px;margin:9px 0 7px}.box p{color:var(--muted);font-size:11px;line-height:1.55}.label{display:block;color:#8c98aa;font-size:9px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;margin:18px 0 6px}.input{width:100%;padding:13px 14px;border:1px solid #263246;border-radius:11px;background:#070c13;color:#fff;outline:none}.input:focus{border-color:#786cff88;box-shadow:0 0 0 3px #786cff18}button{width:100%;margin-top:18px;border:0;border-radius:11px;padding:13px;background:var(--purple);color:#fff;font-weight:1000;cursor:pointer}.msg{min-height:20px;margin-top:13px;color:var(--muted);font-size:10px;line-height:1.5}.back{display:block;margin-top:14px;text-align:center;color:#aeb9cc;font-size:10px}.ok{color:var(--green)}.err{color:var(--red)}
+</style>
+</head>
+<body>
+<main class="box">
+  <div class="brand">Panic Scanner · Owner</div>
+  <h1>Set owner password</h1>
+  <p>Use the one-time recovery token supplied by the Panic Scanner owner. This page changes the owner account password; it does not expose or store the password in the browser.</p>
+  <label class="label" for="token">Recovery token</label>
+  <input id="token" class="input" autocomplete="off" spellcheck="false" placeholder="Paste one-time token">
+  <label class="label" for="password">New password</label>
+  <input id="password" class="input" type="password" autocomplete="new-password" placeholder="At least 12 characters">
+  <label class="label" for="confirm">Confirm password</label>
+  <input id="confirm" class="input" type="password" autocomplete="new-password" placeholder="Repeat password">
+  <button id="submit">Set owner password</button>
+  <div id="msg" class="msg"></div>
+  <a class="back" href="/">Back to Panic Scanner</a>
+</main>
+<script>
+const ENDPOINT='https://xinhpzibmvzqzahcklgy.supabase.co/functions/v1/owner-recover';
+const $=id=>document.getElementById(id);
+$('submit').onclick=async()=>{
+  const token=$('token').value.trim(), password=$('password').value, confirm=$('confirm').value, msg=$('msg');
+  msg.className='msg';
+  if(!token){msg.textContent='Paste the recovery token.';return}
+  if(password.length<12){msg.textContent='Password must be at least 12 characters.';return}
+  if(password!==confirm){msg.textContent='Passwords do not match.';return}
+  $('submit').disabled=true;$('submit').textContent='Updating…';msg.textContent='';
+  try{
+    const r=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,password})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.error||'Recovery failed.');
+    msg.className='msg ok';msg.textContent='Owner password updated. You can now sign in normally as the admin owner.';$('token').value='';$('password').value='';$('confirm').value='';
+  }catch(e){msg.className='msg err';msg.textContent=e.message||'Recovery failed. Try again with a valid one-time token.'}
+  finally{$('submit').disabled=false;$('submit').textContent='Set owner password'}
+};
+</script>
+</body>
+</html>
