@@ -4,7 +4,7 @@
   const SUPABASE_KEY='sb_publishable_YsqF0jHnjrGY2anRaoH9pg_JKqiPqom';
   let client=null, profile=null;
   function load(){
-    if(window.supabase?.createClient){client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); init();return;}
+    if(window.supabase?.createClient){client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);init();return;}
     const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';s.onload=()=>{client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);init()};document.head.appendChild(s);
   }
   async function init(){
@@ -29,9 +29,14 @@
   async function refreshProfile(){
     const {data:{user}}=await client.auth.getUser(); if(!user)return;
     const {data,error}=await client.from('profiles').select('*').eq('id',user.id).maybeSingle();
-    if(!error) profile=data||{plan:'free',subscription_status:'free'};
+    if(!error && data) profile=data;
+    else profile=profile||{plan:'free',subscription_status:'free'};
+    // Owner/admin access is an entitlement in its own right and must not be
+    // downgraded to the customer subscription when the UI refreshes.
+    if(profile?.is_admin===true) profile.plan='elite';
     localStorage.setItem('psEmail',user.email||'');localStorage.setItem('psPlan',profile?.plan||'free');
-    const badge=document.querySelector('.online');if(badge)badge.textContent=`● ${String(profile?.plan||'free').toUpperCase()} ACCOUNT`;
+    localStorage.setItem('psAdmin',profile?.is_admin===true?'1':'0');
+    const badge=document.querySelector('.online');if(badge)badge.textContent=profile?.is_admin===true?'● OWNER / ELITE':`● ${String(profile?.plan||'free').toUpperCase()} ACCOUNT`;
     patchButtons();
   }
   async function authHeaders(){const {data:{session}}=await client.auth.getSession();return session?{Authorization:`Bearer ${session.access_token}`}:{}}
@@ -55,8 +60,18 @@
     document.querySelectorAll('.plan .price').forEach(x=>{if(x.textContent==='Premium')x.textContent='149 NOK / month';if(x.textContent==='Premium+')x.textContent='299 NOK / month'});
   }
   const originalInvestigate=window.investigate;
-  window.investigate=function(){const p=profile?.plan||localStorage.getItem('psPlan')||'free';if(p==='free'){openModal('plansModal');toast('Deep Investigation is a Pro feature.');return}return originalInvestigate?.()};
+  window.investigate=function(){
+    let p=profile?.plan||localStorage.getItem('psPlan')||'free';
+    const admin=profile?.is_admin===true||localStorage.getItem('psAdmin')==='1';
+    if(admin)p='elite';
+    if(p==='free'){openModal('plansModal');toast('Deep Investigation is a Pro feature.');return}
+    return originalInvestigate?.();
+  };
   const originalDrawElite=window.drawElite;
-  window.drawElite=function(){const p=profile?.plan||localStorage.getItem('psPlan')||'free';if(p!=='elite'){return}return originalDrawElite?.()};
+  window.drawElite=function(){
+    const p=profile?.plan||localStorage.getItem('psPlan')||'free';
+    const admin=profile?.is_admin===true||localStorage.getItem('psAdmin')==='1';
+    if(admin||p==='elite')return originalDrawElite?.();
+  };
   load();
 })();
