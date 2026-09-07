@@ -1,83 +1,19 @@
-export default async function handler(request, response) {
-  const symbol = String(request.query?.symbol || "").trim().toUpperCase();
-  const depth = String(request.query?.depth || "pro").toLowerCase();
-  if (!symbol) return response.status(400).json({ error: "Missing stock symbol." });
-
-  const key = process.env.ALPHA_VANTAGE_API_KEY;
-  if (!key) return response.status(500).json({ error: "ALPHA_VANTAGE_API_KEY is not configured in Vercel." });
-
-  async function av(functionName, extra = {}) {
-    const params = new URLSearchParams({ function: functionName, apikey: key, ...extra });
-    if (functionName !== "NEWS_SENTIMENT") params.set("symbol", symbol);
-    const r = await fetch(`https://www.alphavantage.co/query?${params.toString()}`);
-    const data = await r.json();
-    if (data.Note) throw new Error("Market-data API limit reached. Try again later.");
-    if (data["Error Message"]) throw new Error("No data returned for this symbol.");
-    return data;
+function bearer(req){const v=String(req.headers.authorization||'');return v.startsWith('Bearer ')?v.slice(7).trim():''}
+async function db(path, options={}){const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!url||!key)throw new Error('Supabase server integration is not configured.');const r=await fetch(`${url}/rest/v1/${path}`,{...options,headers:{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json',...(options.headers||{})}});const text=await r.text();if(!r.ok)throw new Error(`Database request failed: ${r.status}`);return text?JSON.parse(text):null}
+async function user(req){const token=bearer(req),url=process.env.SUPABASE_URL,key=process.env.SUPABASE_ANON_KEY;if(!token||!url||!key)return null;const r=await fetch(`${url}/auth/v1/user`,{headers:{apikey:key,Authorization:`Bearer ${token}`}});return r.ok?r.json():null}
+module.exports=async function handler(request,response){
+ const symbol=String(request.query?.symbol||'').trim().toUpperCase(),depth=String(request.query?.depth||'pro').toLowerCase();if(!symbol)return response.status(400).json({error:'Missing stock symbol.'});
+ try{
+  const u=await user(request);if(!u)return response.status(401).json({error:'Sign in required for deep research.'});
+  const rows=await db(`profiles?id=eq.${encodeURIComponent(u.id)}&select=id,plan,is_admin,vip_until&limit=1`),p=rows?.[0]||{};const plan=String(p.plan||'Standard').toLowerCase();const vip=Boolean(p.vip_until&&new Date(p.vip_until)>new Date());const tier=p.is_admin||vip?'elite':plan==='elite'?'elite':plan==='pro'?'pro':'standard';
+  const requested=depth==='elite'?'elite':depth==='pro'?'pro':'standard';if(requested==='elite'&&tier!=='elite')return response.status(403).json({error:'Elite research is available on Elite only.'});if(requested==='pro'&&tier==='standard')return response.status(403).json({error:'Pro research requires Pro or Elite.'});
+  if(tier==='standard'){
+   const day=new Date().toISOString().slice(0,10),rows2=await db(`deep_search_usage?user_id=eq.${encodeURIComponent(u.id)}&usage_date=eq.${day}&select=count&limit=1`);const used=Number(rows2?.[0]?.count||0);if(used>=1)return response.status(429).json({error:'Your 1 free deep search for today has been used. Upgrade to Pro for expanded research.'});await db('deep_search_usage',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:u.id,usage_date:day,count:used+1})});
   }
-
-  try {
-    const [overview, news] = await Promise.all([
-      av("OVERVIEW"),
-      av("NEWS_SENTIMENT", { tickers: symbol, limit: depth === "elite" ? "12" : "6", sort: "LATEST" })
-    ]);
-
-    let income = null;
-    if (depth === "elite") {
-      try { income = await av("INCOME_STATEMENT"); } catch (_) { income = null; }
-    }
-
-    const articles = (news.feed || []).slice(0, depth === "elite" ? 12 : 6).map(a => ({
-      title: a.title,
-      source: a.source,
-      url: a.url,
-      time: a.time_published,
-      sentiment: a.overall_sentiment_label,
-      score: Number(a.overall_sentiment_score || 0),
-      summary: a.summary
-    }));
-
-    const revenue = (income?.annualReports || []).slice(0, 5).map(x => Number(x.totalRevenue)).filter(Number.isFinite);
-    const eps = (income?.annualReports || []).slice(0, 5).map(x => Number(x.eps)).filter(Number.isFinite);
-    const avgNews = articles.length ? articles.reduce((s, a) => s + a.score, 0) / articles.length : 0;
-    const positiveNews = articles.filter(a => /positive|bullish/i.test(a.sentiment)).length;
-    const negativeNews = articles.filter(a => /negative|bearish/i.test(a.sentiment)).length;
-    const revenueGrowth = revenue.length >= 2 && revenue[1] ? ((revenue[0] - revenue[1]) / Math.abs(revenue[1])) * 100 : null;
-    const epsGrowth = eps.length >= 2 && eps[1] ? ((eps[0] - eps[1]) / Math.abs(eps[1])) * 100 : null;
-
-    let quality = 50;
-    if (revenueGrowth !== null) quality += revenueGrowth > 0 ? 12 : -12;
-    if (epsGrowth !== null) quality += epsGrowth > 0 ? 15 : -15;
-    if (avgNews > 0.15) quality += 8;
-    if (avgNews < -0.15) quality -= 8;
-    quality = Math.max(0, Math.min(100, Math.round(quality)));
-
-    const fundamentals = {
-      sector: overview.Sector || "—", industry: overview.Industry || "—", description: overview.Description || "",
-      marketCap: overview.MarketCapitalization || null, pe: overview.PERatio || null, peg: overview.PEGRatio || null,
-      eps: overview.EPS || null, revenueTTM: overview.RevenueTTM || null, profitMargin: overview.ProfitMargin || null,
-      operatingMargin: overview.OperatingMarginTTM || null, beta: overview.Beta || null, dividendYield: overview.DividendYield || null,
-      revenueGrowth, epsGrowth
-    };
-    const verdict = quality >= 70 ? "Fundamentals look resilient" : quality <= 35 ? "Fundamentals show meaningful weakness" : "Fundamentals are mixed";
-
-    return response.status(200).json({
-      symbol, depth, generatedAt: new Date().toISOString(), company: overview.Name || symbol, fundamentals,
-      news: { articles, averageSentiment: avgNews, positive: positiveNews, negative: negativeNews },
-      earnings: depth === "elite" ? { annualReports: income?.annualReports || [], eps, revenue } : null,
-      investigation: {
-        quality, verdict,
-        steps: [
-          { id: "market", label: "Market reaction", status: "complete", detail: "Price and panic signal reviewed." },
-          { id: "technical", label: "Technical condition", status: "complete", detail: "Momentum and trend context reviewed." },
-          { id: "fundamentals", label: "Fundamentals", status: "complete", detail: verdict },
-          { id: "catalysts", label: "Catalysts & news", status: articles.length ? "complete" : "limited", detail: articles.length ? `${articles.length} recent articles reviewed.` : "No recent news returned." },
-          { id: "risk", label: "Risk assessment", status: "complete", detail: "Key risks and uncertainty reviewed." },
-          { id: "conclusion", label: "Final conclusion", status: "complete", detail: "Evidence assembled into a research view." }
-        ]
-      }
-    });
-  } catch (error) {
-    return response.status(502).json({ error: error.message || "Investigation failed." });
-  }
-}
+  const key=process.env.ALPHA_VANTAGE_API_KEY;if(!key)return response.status(500).json({error:'Market-data service is not configured.'});
+  async function av(fn,extra={}){const params=new URLSearchParams({function:fn,apikey:key,...extra});if(fn!=='NEWS_SENTIMENT')params.set('symbol',symbol);const r=await fetch(`https://www.alphavantage.co/query?${params}`),d=await r.json();if(d.Note)throw Error('Market-data API limit reached. Try again later.');if(d['Error Message'])throw Error('No data returned for this symbol.');return d}
+  const [overview,news]=await Promise.all([av('OVERVIEW'),av('NEWS_SENTIMENT',{tickers:symbol,limit:requested==='elite'?'12':'6',sort:'LATEST'})]);let income=null;if(requested==='elite'){try{income=await av('INCOME_STATEMENT')}catch(_){}}
+  const articles=(news.feed||[]).slice(0,requested==='elite'?12:6).map(a=>({title:a.title,source:a.source,url:a.url,time:a.time_published,sentiment:a.overall_sentiment_label,score:Number(a.overall_sentiment_score||0),summary:a.summary}));const revenue=(income?.annualReports||[]).slice(0,5).map(x=>Number(x.totalRevenue)).filter(Number.isFinite),eps=(income?.annualReports||[]).slice(0,5).map(x=>Number(x.eps)).filter(Number.isFinite);const avg=articles.length?articles.reduce((s,a)=>s+a.score,0)/articles.length:0,pos=articles.filter(a=>/positive|bullish/i.test(a.sentiment)).length,neg=articles.filter(a=>/negative|bearish/i.test(a.sentiment)).length;const revenueGrowth=revenue.length>=2&&revenue[1]?((revenue[0]-revenue[1])/Math.abs(revenue[1]))*100:null,epsGrowth=eps.length>=2&&eps[1]?((eps[0]-eps[1])/Math.abs(eps[1]))*100:null;let quality=50;if(revenueGrowth!==null)quality+=revenueGrowth>0?12:-12;if(epsGrowth!==null)quality+=epsGrowth>0?15:-15;if(avg>.15)quality+=8;if(avg<-.15)quality-=8;quality=Math.max(0,Math.min(100,Math.round(quality)));const verdict=quality>=70?'Fundamentals look resilient':quality<=35?'Fundamentals show meaningful weakness':'Fundamentals are mixed';
+  return response.status(200).json({symbol,depth:requested,plan:tier,generatedAt:new Date().toISOString(),company:overview.Name||symbol,fundamentals:{sector:overview.Sector||'—',industry:overview.Industry||'—',description:overview.Description||'',marketCap:overview.MarketCapitalization||null,pe:overview.PERatio||null,peg:overview.PEGRatio||null,eps:overview.EPS||null,revenueTTM:overview.RevenueTTM||null,profitMargin:overview.ProfitMargin||null,operatingMargin:overview.OperatingMarginTTM||null,beta:overview.Beta||null,dividendYield:overview.DividendYield||null,revenueGrowth,epsGrowth},news:{articles,averageSentiment:avg,positive:pos,negative:neg},earnings:requested==='elite'?{annualReports:income?.annualReports||[],eps,revenue}:null,investigation:{quality,verdict,steps:[{id:'market',label:'Market reaction',status:'complete'},{id:'technical',label:'Technical condition',status:'complete'},{id:'fundamentals',label:'Fundamentals',status:'complete',detail:verdict},{id:'catalysts',label:'Catalysts & news',status:articles.length?'complete':'limited'},{id:'risk',label:'Risk assessment',status:'complete'},{id:'conclusion',label:'Final conclusion',status:'complete'}]}});
+ }catch(e){return response.status(502).json({error:e.message||'Investigation failed.'})}
+};
