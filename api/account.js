@@ -18,8 +18,8 @@ async function db(path, options = {}) {
 }
 async function ensureProfile(user) {
   const id = encodeURIComponent(user.id);
-  const rows = await db(`profiles?id=eq.${id}&select=id,email,display_name,plan,is_admin,is_vip,subscription_status,stripe_customer_id,stripe_subscription_id,stripe_price_id,subscription_current_period_end,vip_until&limit=1`);
-  if (rows?.[0]) return rows[0];
+  const rows = await db(`profiles?id=eq.${id}&select=id,email,display_name,plan,is_admin,subscription_status,stripe_customer_id,stripe_subscription_id,stripe_price_id,subscription_current_period_end,vip_until&limit=1`);
+  if (rows?.[0]) return { ...rows[0], is_vip: Boolean(rows[0].vip_until && new Date(rows[0].vip_until).getTime() > Date.now()) };
   await db('profiles', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: user.id, email: user.email || null, plan: 'standard', subscription_status: 'free' }) });
   return { id: user.id, email: user.email || null, plan: 'standard', is_admin: false, is_vip: false, subscription_status: 'free' };
 }
@@ -37,7 +37,6 @@ export default async function handler(req, res) {
     if (!user) return res.status(401).json({ error: 'Sign in required.' });
     const id = encodeURIComponent(user.id);
     const profile = await ensureProfile(user);
-
     if (req.method === 'GET') {
       const [settings, watchlist, setups, investigations, theses, journal] = await Promise.all([
         db(`user_settings?user_id=eq.${id}&select=sound,haptic,reduce_motion,volume,research_range&limit=1`),
@@ -49,7 +48,6 @@ export default async function handler(req, res) {
       ]);
       return res.status(200).json({ profile: { ...profile, plan: normalizedPlan(profile.plan) }, settings: settings?.[0] || { sound: true, haptic: true, reduce_motion: false, volume: 70, research_range: '60' }, watchlist: (watchlist || []).map(x => x.symbol), setups: setups || [], investigations: investigations || [], theses: theses || [], journal: journal || [] });
     }
-
     const body = req.body || {};
     if (body.settings && typeof body.settings === 'object') {
       const s = body.settings;
