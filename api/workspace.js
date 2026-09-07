@@ -19,6 +19,7 @@ window.psAuthDo=function(action){var email=document.getElementById('psEmail').va
 window.psCheckout=function(plan,interval){if(!token())return setMsg('Sign in first.');setMsg('Opening secure Stripe checkout…');fetch('/api/billing',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({action:'checkout',plan:plan,interval:interval})}).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d}})}).then(function(x){if(!x.ok)throw Error(x.d.error||'Checkout failed.');location.href=x.d.url}).catch(function(e){setMsg(e.message)})}
 window.psPortal=function(){fetch('/api/billing',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({action:'portal'})}).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d}})}).then(function(x){if(!x.ok)throw Error(x.d.error||'Billing portal unavailable.');location.href=x.d.url}).catch(function(e){setMsg(e.message)})}
 window.psLogout=function(){localStorage.removeItem('pswAccessToken');localStorage.removeItem('pswRefreshToken');setMsg('Signed out.');refresh()}
+var baseAuth=document.getElementById('auth');if(baseAuth)baseAuth.classList.add('hidden');
 refresh();
 })();
 </script>`;
