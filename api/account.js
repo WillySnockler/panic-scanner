@@ -2,43 +2,32 @@ function authToken(req) {
   const value = String(req.headers.authorization || '');
   return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
 }
-
 async function getUser(token) {
-  const url = process.env.SUPABASE_URL;
-  const anon = process.env.SUPABASE_ANON_KEY;
+  const url = process.env.SUPABASE_URL, anon = process.env.SUPABASE_ANON_KEY;
   if (!url || !anon || !token) return null;
   const r = await fetch(`${url}/auth/v1/user`, { headers: { apikey: anon, Authorization: `Bearer ${token}` } });
   return r.ok ? r.json() : null;
 }
-
 async function db(path, options = {}) {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase server integration is not configured.');
-  const r = await fetch(`${url}/rest/v1/${path}`, {
-    ...options,
-    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...(options.headers || {}) }
-  });
+  const r = await fetch(`${url}/rest/v1/${path}`, { ...options, headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...(options.headers || {}) } });
   const text = await r.text();
   if (!r.ok) throw new Error(`Database request failed: ${r.status} ${text}`);
   return text ? JSON.parse(text) : null;
 }
-
 async function ensureProfile(user) {
   const id = encodeURIComponent(user.id);
-  const rows = await db(`profiles?id=eq.${id}&select=id,email,display_name,plan,is_admin,subscription_status,stripe_customer_id,stripe_subscription_id,stripe_price_id,subscription_current_period_end,vip_until&limit=1`);
+  const rows = await db(`profiles?id=eq.${id}&select=id,email,display_name,plan,is_admin,is_vip,subscription_status,stripe_customer_id,stripe_subscription_id,stripe_price_id,subscription_current_period_end,vip_until&limit=1`);
   if (rows?.[0]) return rows[0];
-  await db('profiles', {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ id: user.id, email: user.email || null, plan: 'standard', subscription_status: 'free' })
-  });
-  return { id: user.id, email: user.email || null, plan: 'standard', is_admin: false, subscription_status: 'free' };
+  await db('profiles', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: user.id, email: user.email || null, plan: 'standard', subscription_status: 'free' }) });
+  return { id: user.id, email: user.email || null, plan: 'standard', is_admin: false, is_vip: false, subscription_status: 'free' };
 }
-
-function normalizedPlan(value) {
-  const p = String(value || 'standard').toLowerCase();
-  return p === 'elite' ? 'Elite' : p === 'pro' ? 'Pro' : 'Standard';
+function normalizedPlan(value) { const p = String(value || 'standard').toLowerCase(); return p === 'elite' ? 'Elite' : p === 'pro' ? 'Pro' : 'Standard'; }
+async function replaceRows(table, userId, rows) {
+  await db(`${table}?user_id=eq.${encodeURIComponent(userId)}`, { method: 'DELETE' });
+  if (!Array.isArray(rows) || !rows.length) return;
+  await db(table, { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows) });
 }
 
 export default async function handler(req, res) {
@@ -58,38 +47,39 @@ export default async function handler(req, res) {
         db(`theses?user_id=eq.${id}&select=*&order=created_at.desc`),
         db(`journal_entries?user_id=eq.${id}&select=*&order=created_at.desc`)
       ]);
-      return res.status(200).json({
-        profile: { ...profile, plan: normalizedPlan(profile.plan) },
-        settings: settings?.[0] || { sound: true, haptic: true, reduce_motion: false, volume: 70, research_range: '60' },
-        watchlist: (watchlist || []).map(x => x.symbol),
-        setups: setups || [],
-        investigations: investigations || [],
-        theses: theses || [],
-        journal: journal || []
-      });
+      return res.status(200).json({ profile: { ...profile, plan: normalizedPlan(profile.plan) }, settings: settings?.[0] || { sound: true, haptic: true, reduce_motion: false, volume: 70, research_range: '60' }, watchlist: (watchlist || []).map(x => x.symbol), setups: setups || [], investigations: investigations || [], theses: theses || [], journal: journal || [] });
     }
 
     const body = req.body || {};
     if (body.settings && typeof body.settings === 'object') {
       const s = body.settings;
-      await db('user_settings', {
-        method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({ user_id: user.id, sound: s.sound !== false, haptic: s.haptic !== false, reduce_motion: Boolean(s.reduce_motion ?? s.motion), volume: Math.max(0, Math.min(100, Number(s.volume ?? 70))), research_range: String(s.research_range ?? s.range ?? '60'), updated_at: new Date().toISOString() })
-      });
+      await db('user_settings', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: user.id, sound: s.sound !== false, haptic: s.haptic !== false, reduce_motion: Boolean(s.reduce_motion ?? s.motion), volume: Math.max(0, Math.min(100, Number(s.volume ?? 70))), research_range: String(s.research_range ?? s.range ?? '60'), updated_at: new Date().toISOString() }) });
     }
-
     if (Array.isArray(body.watchlist)) {
       const unique = [...new Set(body.watchlist.map(x => String(x).trim().toUpperCase()).filter(Boolean))].slice(0, 100);
-      await db(`watchlist_items?user_id=eq.${id}`, { method: 'DELETE' });
-      if (unique.length) await db('watchlist_items', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(unique.map(symbol => ({ user_id: user.id, symbol }))) });
+      await replaceRows('watchlist_items', user.id, unique.map(symbol => ({ user_id: user.id, symbol })));
     }
-
+    if (Array.isArray(body.setups)) {
+      const rows = body.setups.slice(0, 50).map(x => ({ user_id: user.id, symbol: String(x.symbol || '').toUpperCase(), entry: x.entry ?? null, stop: x.stop ?? null, target: x.target ?? null, position_amount: x.money ?? x.position_amount ?? null, risk_profile: x.risk ?? x.risk_profile ?? null, notes: x.notes || null }));
+      await replaceRows('setups', user.id, rows.filter(x => x.symbol));
+    }
+    if (Array.isArray(body.theses)) {
+      const rows = body.theses.slice(0, 100).map(x => ({ user_id: user.id, symbol: String(x.symbol || '').toUpperCase(), catalyst: x.catalyst || null, bull_case: x.bull || x.bull_case || null, bear_case: x.bear || x.bear_case || null, confirmation: x.confirm || x.confirmation || null, invalidation: x.invalidation || null }));
+      await replaceRows('theses', user.id, rows.filter(x => x.symbol));
+    }
+    if (Array.isArray(body.investigations)) {
+      const rows = body.investigations.slice(0, 100).map(x => ({ user_id: user.id, symbol: String(x.symbol || '').toUpperCase(), panic_score: x.score ?? x.panic_score ?? null, snapshot: x.snapshot || x }));
+      await replaceRows('investigations', user.id, rows.filter(x => x.symbol));
+    }
+    if (Array.isArray(body.journal)) {
+      const rows = body.journal.slice(0, 200).map(x => ({ user_id: user.id, entry_type: x.type || x.entry_type || 'research', symbol: x.symbol ? String(x.symbol).toUpperCase() : null, title: x.title || null, body: x.body || x.text || null, metadata: x }));
+      await replaceRows('journal_entries', user.id, rows);
+    }
     if (body.profile && typeof body.profile === 'object') {
       const allowed = {};
       if (body.profile.display_name != null) allowed.display_name = String(body.profile.display_name).slice(0, 80);
       if (Object.keys(allowed).length) await db(`profiles?id=eq.${id}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ ...allowed, updated_at: new Date().toISOString() }) });
     }
-
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('account state error', e);
