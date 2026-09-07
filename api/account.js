@@ -20,16 +20,15 @@ async function ensureProfile(user) {
   const id = encodeURIComponent(user.id);
   const rows = await db(`profiles?id=eq.${id}&select=id,email,display_name,plan,is_admin,subscription_status,stripe_customer_id,stripe_subscription_id,stripe_price_id,subscription_current_period_end,vip_until&limit=1`);
   if (rows?.[0]) return { ...rows[0], is_vip: Boolean(rows[0].vip_until && new Date(rows[0].vip_until).getTime() > Date.now()) };
-  await db('profiles', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: user.id, email: user.email || null, plan: 'standard', subscription_status: 'free' }) });
-  return { id: user.id, email: user.email || null, plan: 'standard', is_admin: false, is_vip: false, subscription_status: 'free' };
+  await db('profiles', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: user.id, email: user.email || null, plan: 'Standard', subscription_status: 'free' }) });
+  return { id: user.id, email: user.email || null, plan: 'Standard', is_admin: false, is_vip: false, subscription_status: 'free' };
 }
-function normalizedPlan(value) { const p = String(value || 'standard').toLowerCase(); return p === 'elite' ? 'Elite' : p === 'pro' ? 'Pro' : 'Standard'; }
+function normalizedPlan(value) { const p = String(value || 'Standard').toLowerCase(); return p === 'elite' ? 'Elite' : p === 'pro' ? 'Pro' : 'Standard'; }
 async function replaceRows(table, userId, rows) {
   await db(`${table}?user_id=eq.${encodeURIComponent(userId)}`, { method: 'DELETE' });
   if (!Array.isArray(rows) || !rows.length) return;
   await db(table, { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows) });
 }
-
 export default async function handler(req, res) {
   try {
     if (!['GET', 'PUT'].includes(req.method)) return res.status(405).json({ error: 'Method not allowed' });
