@@ -15,9 +15,27 @@ async function userFromToken(req) {
 async function requireAdmin(req) {
   const user = await userFromToken(req);
   if (!user?.id) return { error: 'Sign in required.', status: 401 };
+  const email = String(user.email || '').trim().toLowerCase();
+  const ownerEmail = String(process.env.ADMIN_OWNER_EMAIL || 'johansenw84@gmail.com').trim().toLowerCase();
   const rows = await db(`profiles?id=eq.${encodeURIComponent(user.id)}&select=id,email,is_admin,plan,vip_until&limit=1`);
-  if (!rows?.[0]?.is_admin) return { error: 'Admin access required.', status: 403 };
-  return { user, profile: rows[0] };
+  const profile = rows?.[0] || null;
+
+  // The authenticated owner email is the bootstrap admin. Once authenticated,
+  // persist is_admin so the admin role also works for normal profile checks.
+  if (email === ownerEmail) {
+    if (!profile?.is_admin) {
+      const patch = { is_admin: true, email: user.email, updated_at: new Date().toISOString() };
+      await db(`profiles?id=eq.${encodeURIComponent(user.id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify(patch)
+      });
+    }
+    return { user, profile: { ...(profile || {}), id: user.id, email: user.email, is_admin: true } };
+  }
+
+  if (!profile?.is_admin) return { error: 'Admin access required.', status: 403 };
+  return { user, profile };
 }
 module.exports = async (req, res) => {
   if (!['GET', 'POST', 'PATCH', 'OPTIONS'].includes(req.method)) return res.status(405).json({ error: 'Method not allowed' });
