@@ -11,6 +11,7 @@
   window.startCheckout=startCheckout;window.manageBilling=manageBilling;
   function wire(){const b=document.getElementById('psffaccount');if(b){b.textContent='Account';b.dataset.accountFixed='1';b.onclick=function(){if(token()){if(window.psFinalShowAccount)window.psFinalShowAccount();else if(window.openModal)window.openModal('accountModal')}else if(window.psFinalShowAuth)window.psFinalShowAuth('login')}}patchPlans()}
   function loadWorkspaceScript(){if(document.getElementById('psWorkspaceScript'))return;const s=document.createElement('script');s.id='psWorkspaceScript';s.src='/workspace-fix.js';document.head.appendChild(s)}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){wire();loadWorkspaceScript()});else{wire();loadWorkspaceScript()}
+  function loadFrontFix(){if(document.getElementById('psFrontFixScript'))return;const s=document.createElement('script');s.id='psFrontFixScript';s.src='/front-fix.js';document.head.appendChild(s)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){wire();loadWorkspaceScript();loadFrontFix()});else{wire();loadWorkspaceScript();loadFrontFix()}
   refreshProfile().then(wire);setInterval(function(){refreshProfile().then(wire)},60000);window.addEventListener('focus',function(){refreshProfile().then(wire)});document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshProfile().then(wire)});
 })();
