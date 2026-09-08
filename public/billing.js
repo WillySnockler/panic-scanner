@@ -1,1 +1,39 @@
-(function(){var s=document.createElement('script');s.src='/billing-ui.js?v=1dbbb05';s.defer=true;document.head.appendChild(s);})();
+/* Panic Scanner production auth, billing and entitlement bridge. */
+(function(){
+  const SUPABASE_URL='https://xinhpzibmvzqzahcklgy.supabase.co';
+  const SUPABASE_KEY='sb_publishable_YsqF0jHnjrGY2anRaoH9pg_JKqiPqom';
+  let client=null, profile=null;
+  function load(){
+    if(window.supabase?.createClient){client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);init();return;}
+    const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';s.onload=()=>{client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);init()};document.head.appendChild(s);
+  }
+  function isVip(){return Boolean(profile?.vip_until&&new Date(profile.vip_until).getTime()>Date.now())}
+  function effectivePlan(){if(profile?.is_admin===true||isVip())return 'elite';const p=String(profile?.plan||'standard').toLowerCase();return p==='elite'?'elite':p==='pro'?'pro':'standard'}
+  async function syncToken(session){if(session?.access_token){localStorage.setItem('pswAccessToken',session.access_token);if(session.refresh_token)localStorage.setItem('pswRefreshToken',session.refresh_token)}else{localStorage.removeItem('pswAccessToken');localStorage.removeItem('pswRefreshToken')}}
+  async function init(){
+    const {data:{session}}=await client.auth.getSession();await syncToken(session);
+    if(session){hideAuth();await refreshProfile()}else showAuth();
+    client.auth.onAuthStateChange(async (_e,s)=>{await syncToken(s);if(s){hideAuth();await refreshProfile()}else{showAuth();profile=null;localStorage.removeItem('psPlan');localStorage.removeItem('psAdmin')}});
+    window.startCheckout=startCheckout;window.manageBilling=manageBilling;window.createAccount=createAccount;window.enterApp=signIn;window.demoLogin=()=>toast('Demo access is disabled. Create a free account to continue.');patchButtons();
+    const originalFetch=window.fetch.bind(window);
+    window.fetch=async function(input,init){
+      let url=typeof input==='string'?input:(input?.url||'');
+      if(/^\/api\/(investigate|account|billing)(\?|$)/.test(url)){const headers=new Headers(init?.headers||{});if(!headers.has('Authorization')){const {data:{session}}=await client.auth.getSession();if(session?.access_token)headers.set('Authorization','Bearer '+session.access_token)}init={...(init||{}),headers};}
+      if(url.startsWith('/api/investigate?')&&/[?&]mode=research(?:&|$)/.test(url)){const plan=effectivePlan();const depth=plan==='elite'?'elite':plan==='pro'?'pro':'standard';input=url.replace(/([?&])depth=(elite|pro|standard)/,'$1depth='+depth);}
+      else if(url.startsWith('/api/investigate?')&&/[?&]symbol=/.test(url)&&/[?&]depth=elite/.test(url)){const plan=effectivePlan();input=url.replace(/([?&])depth=elite/,'$1depth='+(plan==='elite'?'elite':plan==='pro'?'pro':'standard'));}
+      return originalFetch(input,init);
+    };
+  }
+  function hideAuth(){document.getElementById('auth')?.classList.add('hidden')}
+  function showAuth(){document.getElementById('auth')?.classList.remove('hidden')}
+  async function signIn(){const email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';if(!email||!password){toast('Enter your email and password.');return}const {error}=await client.auth.signInWithPassword({email,password});if(error)toast(error.message);else toast('Signed in.')}
+  async function createAccount(){const email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';if(!email||password.length<8){toast('Use an email and a password of at least 8 characters.');return}const {error}=await client.auth.signUp({email,password});if(error)toast(error.message);else toast('Account created. Check your email if confirmation is required.')}
+  async function refreshProfile(){const {data:{user}}=await client.auth.getUser();if(!user)return;const {data,error}=await client.from('profiles').select('*').eq('id',user.id).maybeSingle();if(!error&&data)profile=data;else profile=profile||{plan:'standard',subscription_status:'free'};if(profile?.is_admin===true)profile.plan='elite';const plan=effectivePlan();localStorage.setItem('psEmail',user.email||'');localStorage.setItem('psPlan',plan);localStorage.setItem('psAdmin',profile?.is_admin===true?'1':'0');const badge=document.querySelector('.online');if(badge)badge.textContent=profile?.is_admin===true?'● OWNER / ELITE':isVip()?'● VIP / ELITE':`● ${plan.toUpperCase()} ACCOUNT`;patchButtons()}
+  async function authHeaders(){const {data:{session}}=await client.auth.getSession();return session?{Authorization:`Bearer ${session.access_token}`}:{}}
+  async function startCheckout(plan,interval='monthly'){const headers=await authHeaders();if(!headers.Authorization){openModal('accountModal');toast('Sign in first.');return}const r=await fetch('/api/billing',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify({action:'checkout',plan,interval})});const d=await r.json();if(!r.ok){toast(d.error||'Checkout failed.');return}window.location.href=d.url}
+  async function manageBilling(){const headers=await authHeaders();if(!headers.Authorization){openModal('accountModal');toast('Sign in first.');return}const r=await fetch('/api/billing',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify({action:'portal'})});const d=await r.json();if(!r.ok){toast(d.error||'Billing portal unavailable.');return}window.location.href=d.url}
+  function patchButtons(){document.querySelectorAll('.plan.pro button').forEach(b=>{if(!b.dataset.billing){b.dataset.billing='1';b.textContent='Choose Pro · 149 NOK/mo';b.onclick=()=>startCheckout('pro','monthly')}});document.querySelectorAll('.plan.elite button').forEach(b=>{if(!b.dataset.billing){b.dataset.billing='1';b.textContent='Choose Elite · 299 NOK/mo';b.onclick=()=>startCheckout('elite','monthly')}});document.querySelectorAll('.plan').forEach(card=>{if(card.dataset.annual==='1')return;const title=card.querySelector('h3')?.textContent?.trim();if(title==='Pro'||title==='Elite'){card.dataset.annual='1';const b=document.createElement('button');b.className='outline';b.style='width:100%;margin-top:7px';b.textContent=title==='Pro'?'Annual · 1,499 NOK':'Annual · 2,990 NOK';b.onclick=()=>startCheckout(title.toLowerCase(),'yearly');card.appendChild(b)}});const modal=document.getElementById('accountModal');if(modal&&!modal.querySelector('[data-manage-billing]')){const p=modal.querySelector('.modalBody');if(p){const box=document.createElement('div');box.style='margin-top:14px;display:flex;gap:8px;justify-content:flex-end';box.innerHTML='<button data-manage-billing class="outline">Manage subscription</button><button class="outline" onclick="closeModal(\'accountModal\')">Close</button>';p.appendChild(box);box.querySelector('[data-manage-billing]').onclick=manageBilling;}}document.querySelectorAll('.plan .price').forEach(x=>{if(x.textContent==='Premium')x.textContent='149 NOK / month';if(x.textContent==='Premium+')x.textContent='299 NOK / month'})}
+  const originalInvestigate=window.investigate;window.investigate=function(){const p=effectivePlan();if(p==='standard'&&!profile){openModal('accountModal');toast('Sign in to use your daily deep investigation.');return}return originalInvestigate?.()};
+  const originalDrawElite=window.drawElite;window.drawElite=function(){if(effectivePlan()==='elite')return originalDrawElite?.()};
+  load();
+})();
