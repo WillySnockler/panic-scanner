@@ -1,4 +1,5 @@
 /* Panic Scanner real sign-in / signup / demo bridge. */
+/* Production hardening: auth actions are delegated here so legacy inline handlers cannot break signup or demo. */
 (function(){
   'use strict';
   var TK='pswAccessToken',RK='pswRefreshToken',DEMO='psDemoMode';
