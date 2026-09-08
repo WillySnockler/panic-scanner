@@ -1,5 +1,5 @@
 /* Panic Scanner real sign-in / signup / demo bridge. */
-/* Production hardening: auth actions are delegated here so legacy inline handlers cannot break signup or demo. */
+/* Production hardening: handles both the original auth screen and the final account modal. */
 (function(){
   'use strict';
   var TK='pswAccessToken',RK='pswRefreshToken',DEMO='psDemoMode';
@@ -26,12 +26,14 @@
       .then(function(r){return r.json().catch(function(){return{}}).then(function(d){if(!r.ok)throw Error(d.error||'Authentication failed.');return d})});
   }
   async function establishSession(d){
+    if(!d||!d.access_token)throw Error('No active session was returned.');
     localStorage.setItem(TK,d.access_token);
     if(d.refresh_token)localStorage.setItem(RK,d.refresh_token);
     localStorage.setItem('psLoggedIn','1');
+    if(d.user&&d.user.email)localStorage.setItem('psEmail',d.user.email);
     sessionStorage.removeItem(DEMO);
     try{var c=await getSupabase();if(d.refresh_token)await c.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token})}catch(e){}
-    try{var r=await fetch('/api/account',{headers:{Authorization:'Bearer '+d.access_token}});var a=await r.json();window.psProfile=a.profile||{}}catch(e){window.psProfile={}}
+    try{var r=await fetch('/api/account',{headers:{Authorization:'Bearer '+d.access_token}});var a=await r.json();window.psProfile=a.profile||{};if(a.profile){localStorage.setItem('psEmail',a.profile.email||'');localStorage.setItem('psPlan',a.profile.plan||'standard');localStorage.setItem('psAdmin',a.profile.is_admin?'1':'0')}}catch(e){window.psProfile={}}
   }
   function setBusy(on){document.querySelectorAll('#auth button').forEach(function(b){b.disabled=on})}
   async function login(){
@@ -39,7 +41,7 @@
     var password=document.getElementById('password')?.value||'';
     if(!email||!password){toastSafe('Enter your email and password.');return}
     setBusy(true);
-    try{var d=await apiAuth('login',email,password);if(!d.access_token)throw Error('No active session was returned.');await establishSession(d);hideAuth();toastSafe('Signed in successfully.');if(window.psFinalShowAccount)setTimeout(function(){window.psFinalShowAccount()},160)}
+    try{var d=await apiAuth('login',email,password);await establishSession(d);hideAuth();toastSafe('Signed in successfully.');window.location.reload()}
     catch(e){toastSafe(e.message||'Sign in failed.')}finally{setBusy(false)}
   }
   async function signup(){
@@ -47,41 +49,60 @@
     var password=document.getElementById('password')?.value||'';
     if(!email||password.length<8){toastSafe('Enter a valid email and a password of at least 8 characters.');return}
     setBusy(true);
-    try{var d=await apiAuth('signup',email,password);if(!d.access_token)throw Error('Account created, but no session was returned. Please sign in.');await establishSession(d);hideAuth();toastSafe('Account created and signed in.');if(window.psFinalShowAccount)setTimeout(function(){window.psFinalShowAccount()},160)}
+    try{var d=await apiAuth('signup',email,password);await establishSession(d);hideAuth();toastSafe('Account created and signed in.');window.location.reload()}
     catch(e){toastSafe(e.message||'Could not create the account.')}finally{setBusy(false)}
   }
   function demo(){
     sessionStorage.setItem(DEMO,'1');
     hideAuth();
     toastSafe('Demo started — explore Panic Scanner with live market data. Sign in to save research and use your account.');
-    setTimeout(function(){
-      try{
-        if(typeof window.analyze==='function')window.analyze('AAPL','Apple Inc.');
-        else if(typeof window.fixResearch==='function')window.fixResearch('AAPL');
-        else toastSafe('Demo could not start. Please refresh and try again.');
-      }catch(e){toastSafe('Demo could not start. Please try again.')}
-    },250);
+    setTimeout(function(){try{if(typeof window.analyze==='function')window.analyze('AAPL','Apple Inc.');else if(typeof window.fixResearch==='function')window.fixResearch('AAPL');else toastSafe('Demo could not start. Please refresh and try again.')}catch(e){toastSafe('Demo could not start. Please try again.')}},250);
   }
-  function accountClick(){
-    if(window.psFinalShowAccount)return window.psFinalShowAccount();
-    if(token()&&window.openModal)return window.openModal('accountModal');
-    if(window.psFinalShowAuth)return window.psFinalShowAuth('login');
-    showAuth();
+  async function finalModalAuth(isSignup){
+    var d=document.getElementById('psffmodal');if(!d)return;
+    var email=(d.querySelector('#psffemail')?.value||'').trim().toLowerCase();
+    var password=d.querySelector('#psffpass')?.value||'';
+    var msg=d.querySelector('#psffmsg'),btn=d.querySelector('#psffauth');
+    if(!email||password.length<(isSignup?8:1)){if(msg)msg.textContent=isSignup?'Enter a valid email and a password of at least 8 characters.':'Enter your email and password.';return}
+    if(btn){btn.disabled=true;btn.textContent=isSignup?'Creating…':'Signing in…'}
+    try{var x=await apiAuth(isSignup?'signup':'login',email,password);await establishSession(x);d.remove();hideAuth();toastSafe(isSignup?'Account created and signed in.':'Signed in successfully.');setTimeout(function(){location.reload()},120)}
+    catch(e){if(msg)msg.textContent=e.message||'Authentication failed.';if(btn){btn.disabled=false;btn.textContent=isSignup?'Create account':'Sign in'}}
   }
+  async function finalAccount(){
+    if(!token()){return showAuth()}
+    try{
+      var d=await fetch('/api/account',{headers:{Authorization:'Bearer '+token()}});var a=await d.json();
+      if(!d.ok)throw Error(a.error||'Sign in required.');
+      window.psProfile=a.profile||{};
+      var p=a.profile||{},raw=String(p.plan||'standard').toLowerCase(),label=raw==='elite'?'Elite':raw==='pro'?'Pro':'Free';
+      if(p.is_admin===true)label='Elite · Admin';else if(p.is_vip===true)label='Elite · VIP';
+      var old=document.getElementById('psffmodal');if(old)old.remove();
+      var wrap=document.createElement('div');wrap.id='psffmodal';wrap.className='psffback';
+      wrap.innerHTML='<div class="psffcard"><button class="psffbtn" style="float:right" id="psffaccountclose">Close</button><h2>Account</h2><div class="psffsub">Your Panic Scanner account</div><div class="psffaccountinfo"><div class="psffaccountbox"><small>Status</small><b>● Signed in</b></div><div class="psffaccountbox"><small>Plan</small><b>'+String(label).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})+'</b></div><div class="psffaccountbox"><small>Email</small><b>'+String(p.email||a.profile?.email||localStorage.getItem('psEmail')||'').replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})+'</b></div></div><div class="psffrow"><button class="psffbtn" id="psffmanage2">Manage subscription</button><button class="psffbtn" id="psffsignout2">Sign out</button></div></div>';
+      document.body.appendChild(wrap);wrap.querySelector('#psffaccountclose').onclick=function(){wrap.remove()};wrap.querySelector('#psffmanage2').onclick=function(){if(window.manageBilling)window.manageBilling()};wrap.querySelector('#psffsignout2').onclick=function(){localStorage.removeItem(TK);localStorage.removeItem(RK);localStorage.removeItem('psLoggedIn');localStorage.removeItem('psEmail');localStorage.removeItem('psPlan');localStorage.removeItem('psAdmin');getSupabase().then(function(c){return c.auth.signOut()}).catch(function(){}).then(function(){location.reload()})};
+    }catch(e){localStorage.removeItem(TK);localStorage.removeItem(RK);localStorage.removeItem('psLoggedIn');showAuth();toastSafe(e.message||'Sign in required.')}
+  }
+  function accountClick(){return finalAccount()}
   function buttonRouter(e){
-    var a=authOverlay();if(!a||!a.contains(e.target))return;
-    var b=e.target.closest('button');if(!b)return;
-    var t=(b.textContent||'').trim().toLowerCase();
-    if(/demo/.test(t)){e.preventDefault();e.stopImmediatePropagation();demo();return}
-    if(/create account|sign up|signup|create free/.test(t)){e.preventDefault();e.stopImmediatePropagation();signup();return}
-    if(/sign in|log in|login/.test(t)){e.preventDefault();e.stopImmediatePropagation();login();return}
+    var a=authOverlay();
+    if(a&&a.contains(e.target)){
+      var b=e.target.closest('button');if(b){var t=(b.textContent||'').trim().toLowerCase();if(/demo/.test(t)){e.preventDefault();e.stopImmediatePropagation();demo();return}if(/create account|sign up|signup|create free/.test(t)){e.preventDefault();e.stopImmediatePropagation();signup();return}if(/sign in|log in|login/.test(t)){e.preventDefault();e.stopImmediatePropagation();login();return}}
+    }
+    var pm=document.getElementById('psffmodal');
+    if(pm&&pm.contains(e.target)){
+      var pb=e.target.closest('button');if(!pb)return;
+      var pt=(pb.textContent||'').trim().toLowerCase();
+      if(/create account/.test(pt)&&pb.id==='psffauth'){e.preventDefault();e.stopImmediatePropagation();finalModalAuth(true);return}
+      if(/sign in/.test(pt)&&pb.id==='psffauth'){e.preventDefault();e.stopImmediatePropagation();finalModalAuth(false);return}
+      if(/i already have an account/.test(pt)){e.preventDefault();e.stopImmediatePropagation();var h=pm.querySelector('h2');if(h)h.textContent='Sign in to Panic Scanner';var sub=pm.querySelector('.psffsub');if(sub)sub.textContent='Real account access.';var main=pm.querySelector('#psffauth');if(main){main.textContent='Sign in';main.dataset.mode='login'}var sw=pm.querySelector('#psffswitch');if(sw){sw.textContent='Create account'}return}
+      if(pt==='create account'&&pb.id==='psffswitch'){e.preventDefault();e.stopImmediatePropagation();var h2=pm.querySelector('h2');if(h2)h2.textContent='Create your account';var main2=pm.querySelector('#psffauth');if(main2){main2.textContent='Create account';main2.dataset.mode='signup'}var sw2=pm.querySelector('#psffswitch');if(sw2)sw2.textContent='I already have an account';return}
+    }
   }
+  function accountWire(){var b=document.getElementById('psffaccount');if(b){b.textContent='Account';b.onclick=accountClick}window.psFinalShowAccount=accountClick}
   function install(){
     window.enterApp=login;window.createAccount=signup;window.demoLogin=demo;
-    var a=authOverlay();
-    if(a){a.style.display='';a.removeAttribute('aria-hidden');if(!token()&&sessionStorage.getItem(DEMO)!=='1')a.classList.remove('hidden')}
-    var b=document.getElementById('psffaccount');if(b){b.textContent='Account';b.onclick=accountClick}
-    if(sessionStorage.getItem(DEMO)==='1'&&!token())hideAuth();
+    var a=authOverlay();if(a){a.style.display='';a.removeAttribute('aria-hidden');if(token()||sessionStorage.getItem(DEMO)==='1')a.classList.add('hidden');else a.classList.remove('hidden')}
+    accountWire();
   }
   function boot(){install();setTimeout(install,80);setTimeout(install,400);setTimeout(install,1200)}
   document.addEventListener('click',buttonRouter,true);
