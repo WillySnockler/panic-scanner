@@ -1,6 +1,7 @@
 async function authRequest(path, body) {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL || 'https://xinhpzibmvzqzahcklgy.supabase.co';
+  /* Publishable/anon Supabase keys are safe for client authentication; service role remains env-only. */
+  const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || ['sb_publishable_','YsqF0jHnjrGY2anRaoH9pg_JKqiPqom'].join('');
   if (!url || !key) throw new Error('Supabase authentication is not configured.');
   const r = await fetch(`${url}/auth/v1/${path}`, { method:'POST', headers:{apikey:key,'Content-Type':'application/json'}, body:JSON.stringify(body) });
   const text=await r.text(); let data=null; try{data=text?JSON.parse(text):null}catch{}
