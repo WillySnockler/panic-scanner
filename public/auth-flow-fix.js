@@ -43,7 +43,7 @@
       if(!d.access_token)throw Error('No active session was returned.');
       await establishSession(d);
       hideAuth();
-      if(window.psFinalShowAccount){toastSafe('Signed in successfully.')}else toastSafe('Signed in successfully.');
+      toastSafe('Signed in successfully.');
     }catch(e){toastSafe(e.message||'Sign in failed.')}finally{setBusy(false)}
   }
   async function signup(){
@@ -53,16 +53,15 @@
     setBusy(true);
     try{
       var d=await apiAuth('signup',email,password);
-      if(d.access_token){
-        await establishSession(d);hideAuth();toastSafe('Account created and signed in.');
-      }else toastSafe('Account created. Check your email to confirm it, then sign in.');
+      if(d.access_token){await establishSession(d);hideAuth();toastSafe('Account created and signed in.');}
+      else toastSafe('Account created. Check your email to confirm it, then sign in.');
     }catch(e){toastSafe(e.message||'Could not create the account.')}finally{setBusy(false)}
   }
   function demo(){
     sessionStorage.setItem(DEMO,'1');
     hideAuth();
     toastSafe('Demo started — explore Panic Scanner with live market data. Sign in to save research and use your account.');
-    setTimeout(function(){try{if(window.analyze)window.analyze('AAPL','Apple Inc.')}catch(e){toastSafe('Demo could not start. Please try again.')}},250);
+    setTimeout(function(){try{if(window.analyze)window.analyze('AAPL','Apple Inc.');else if(window.fixResearch)window.fixResearch('AAPL')}catch(e){toastSafe('Demo could not start. Please try again.')}},250);
   }
   function accountClick(){
     if(window.psFinalShowAccount)return window.psFinalShowAccount();
@@ -75,10 +74,7 @@
     window.createAccount=signup;
     window.demoLogin=demo;
     var a=authOverlay();
-    if(a){
-      a.style.display='';a.removeAttribute('aria-hidden');
-      if(!token()&&sessionStorage.getItem(DEMO)!=='1')a.classList.remove('hidden');
-    }
+    if(a){a.style.display='';a.removeAttribute('aria-hidden');if(!token()&&sessionStorage.getItem(DEMO)!=='1')a.classList.remove('hidden');}
     var b=document.getElementById('psffaccount');
     if(b){b.textContent='Account';b.onclick=accountClick}
     if(sessionStorage.getItem(DEMO)==='1'&&!token())hideAuth();
