@@ -29,7 +29,7 @@
     if(d.refresh_token)localStorage.setItem(RK,d.refresh_token);
     localStorage.setItem('psLoggedIn','1');
     sessionStorage.removeItem(DEMO);
-    try{var c=await getSupabase();await c.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token||''})}catch(e){}
+    try{var c=await getSupabase();if(d.refresh_token)await c.auth.setSession({access_token:d.access_token,refresh_token:d.refresh_token})}catch(e){}
     try{var r=await fetch('/api/account',{headers:{Authorization:'Bearer '+d.access_token}});var a=await r.json();window.psProfile=a.profile||{}}catch(e){window.psProfile={}}
   }
   function setBusy(on){document.querySelectorAll('#auth button').forEach(function(b){b.disabled=on})}
@@ -38,30 +38,28 @@
     var password=document.getElementById('password')?.value||'';
     if(!email||!password){toastSafe('Enter your email and password.');return}
     setBusy(true);
-    try{
-      var d=await apiAuth('login',email,password);
-      if(!d.access_token)throw Error('No active session was returned.');
-      await establishSession(d);
-      hideAuth();
-      toastSafe('Signed in successfully.');
-    }catch(e){toastSafe(e.message||'Sign in failed.')}finally{setBusy(false)}
+    try{var d=await apiAuth('login',email,password);if(!d.access_token)throw Error('No active session was returned.');await establishSession(d);hideAuth();toastSafe('Signed in successfully.');if(window.psFinalShowAccount)setTimeout(function(){window.psFinalShowAccount()},160)}
+    catch(e){toastSafe(e.message||'Sign in failed.')}finally{setBusy(false)}
   }
   async function signup(){
     var email=(document.getElementById('email')?.value||'').trim().toLowerCase();
     var password=document.getElementById('password')?.value||'';
     if(!email||password.length<8){toastSafe('Enter a valid email and a password of at least 8 characters.');return}
     setBusy(true);
-    try{
-      var d=await apiAuth('signup',email,password);
-      if(d.access_token){await establishSession(d);hideAuth();toastSafe('Account created and signed in.');}
-      else toastSafe('Account created. Check your email to confirm it, then sign in.');
-    }catch(e){toastSafe(e.message||'Could not create the account.')}finally{setBusy(false)}
+    try{var d=await apiAuth('signup',email,password);if(!d.access_token)throw Error('Account created, but no session was returned. Please sign in.');await establishSession(d);hideAuth();toastSafe('Account created and signed in.');if(window.psFinalShowAccount)setTimeout(function(){window.psFinalShowAccount()},160)}
+    catch(e){toastSafe(e.message||'Could not create the account.')}finally{setBusy(false)}
   }
   function demo(){
     sessionStorage.setItem(DEMO,'1');
     hideAuth();
     toastSafe('Demo started — explore Panic Scanner with live market data. Sign in to save research and use your account.');
-    setTimeout(function(){try{if(window.analyze)window.analyze('AAPL','Apple Inc.');else if(window.fixResearch)window.fixResearch('AAPL')}catch(e){toastSafe('Demo could not start. Please try again.')}},250);
+    setTimeout(function(){
+      try{
+        if(typeof window.analyze==='function')window.analyze('AAPL','Apple Inc.');
+        else if(typeof window.fixResearch==='function')window.fixResearch('AAPL');
+        else toastSafe('Demo could not start. Please refresh and try again.');
+      }catch(e){toastSafe('Demo could not start. Please try again.')}
+    },250);
   }
   function accountClick(){
     if(window.psFinalShowAccount)return window.psFinalShowAccount();
@@ -69,16 +67,22 @@
     if(window.psFinalShowAuth)return window.psFinalShowAuth('login');
     showAuth();
   }
+  function buttonRouter(e){
+    var a=authOverlay();if(!a||!a.contains(e.target))return;
+    var b=e.target.closest('button');if(!b)return;
+    var t=(b.textContent||'').trim().toLowerCase();
+    if(/demo/.test(t)){e.preventDefault();e.stopImmediatePropagation();demo();return}
+    if(/create account|sign up|signup|create free/.test(t)){e.preventDefault();e.stopImmediatePropagation();signup();return}
+    if(/sign in|log in|login/.test(t)){e.preventDefault();e.stopImmediatePropagation();login();return}
+  }
   function install(){
-    window.enterApp=login;
-    window.createAccount=signup;
-    window.demoLogin=demo;
+    window.enterApp=login;window.createAccount=signup;window.demoLogin=demo;
     var a=authOverlay();
-    if(a){a.style.display='';a.removeAttribute('aria-hidden');if(!token()&&sessionStorage.getItem(DEMO)!=='1')a.classList.remove('hidden');}
-    var b=document.getElementById('psffaccount');
-    if(b){b.textContent='Account';b.onclick=accountClick}
+    if(a){a.style.display='';a.removeAttribute('aria-hidden');if(!token()&&sessionStorage.getItem(DEMO)!=='1')a.classList.remove('hidden')}
+    var b=document.getElementById('psffaccount');if(b){b.textContent='Account';b.onclick=accountClick}
     if(sessionStorage.getItem(DEMO)==='1'&&!token())hideAuth();
   }
   function boot(){install();setTimeout(install,80);setTimeout(install,400);setTimeout(install,1200)}
+  document.addEventListener('click',buttonRouter,true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
