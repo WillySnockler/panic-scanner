@@ -20,5 +20,5 @@
   const originalInvestigate=window.investigate;window.investigate=function(){const p=effectivePlan();if(p==='standard'&&!profile){openModal('accountModal');toast('Sign in to use your daily deep investigation.');return}return originalInvestigate?.()};
   const originalDrawElite=window.drawElite;window.drawElite=function(){if(effectivePlan()==='elite')return originalDrawElite?.()};
   load();
-  setInterval(function(){var b=document.getElementById('psffaccount');if(b&&!b.dataset.accountFixed){b.dataset.accountFixed='1';b.onclick=function(){if(localStorage.getItem('pswAccessToken')){if(typeof window.openModal==='function')window.openModal('accountModal');else{var m=document.getElementById('accountModal');if(m)m.classList.add('open')}}else if(typeof window.psFinalShowAuth==='function')window.psFinalShowAuth('login')}}},100);
+  setInterval(function(){var b=document.getElementById('psffaccount');if(b&&!b.dataset.accountFixed){b.dataset.accountFixed='1';b.onclick=function(){if(typeof window.psFinalShowAuth==='function')window.psFinalShowAuth('login');else if(typeof window.auth==='function')window.auth('login')}}},100);
 })();
