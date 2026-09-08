@@ -8,6 +8,12 @@
     var r=el.getBoundingClientRect();
     return r.width>0 && r.height>0;
   }
+  function loadAuthFlow(){
+    if(document.getElementById('psAuthFlowFix')) return;
+    var s=document.createElement('script');s.id='psAuthFlowFix';s.src='/auth-flow-fix.js';
+    s.onload=function(){if(window.psAuthFlowBoot)window.psAuthFlowBoot()};
+    document.body.appendChild(s);
+  }
   function apply(){
     var tools=document.getElementById('psTools');
     if(tools){
@@ -27,6 +33,7 @@
     var custom=document.getElementById('psffmodal');
     if(visible(custom)) overlayOpen=true;
     document.body.classList.toggle('psOverlayActive',overlayOpen);
+    loadAuthFlow();
   }
   function boot(){apply();setTimeout(apply,50);setTimeout(apply,250);setTimeout(apply,1000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
