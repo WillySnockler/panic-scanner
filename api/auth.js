@@ -1,3 +1,4 @@
+/* Production auth endpoint: login, signup, and refresh. */
 async function authRequest(path, body) {
   const url = process.env.SUPABASE_URL || 'https://xinhpzibmvzqzahcklgy.supabase.co';
   const key = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || ['sb_publishable_','YsqF0jHnjrGY2anRaoH9pg_JKqiPqom'].join('');
