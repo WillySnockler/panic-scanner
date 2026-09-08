@@ -7,3 +7,4 @@
 - Signup now uses the server-side Supabase Admin API when available, so normal account creation does not consume the built-in confirmation-email quota.
 - Auth overlay buttons are delegated through the real auth bridge so Create account, Sign in, and Demo cannot be broken by legacy inline handlers.
 - Production auth flow is pinned to the latest real-session implementation before declaring signup, login, and demo fixed.
+- Production sync trigger: Vercel deployment verification.
