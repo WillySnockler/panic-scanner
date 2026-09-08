@@ -1,0 +1,2 @@
+const fs=require('fs');const path=require('path');
+module.exports=async function(req,res){try{let html=fs.readFileSync(path.join(process.cwd(),'index.html'),'utf8');const inject='<script src="/final-fix.js"></script>';html=html.replace('</body>',inject+'</body>');res.setHeader('Content-Type','text/html; charset=utf-8');res.statusCode=200;res.end(html)}catch(e){res.statusCode=500;res.end('Application failed to load.')}};
