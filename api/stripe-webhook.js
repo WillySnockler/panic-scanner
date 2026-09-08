@@ -41,6 +41,18 @@ async function updateProfile(userId, patch) {
   await supabaseRequest('profiles', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: userId, ...patch }) });
 }
 
+async function findUserIdByStripe({ customerId, subscriptionId }) {
+  const filters = [];
+  if (customerId) filters.push(`stripe_customer_id=eq.${encodeURIComponent(customerId)}`);
+  if (subscriptionId) filters.push(`stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`);
+  for (const filter of filters) {
+    const r = await supabaseRequest(`profiles?select=id&${filter}&limit=1`);
+    const rows = await r.json();
+    if (rows?.[0]?.id) return rows[0].id;
+  }
+  return null;
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -53,15 +65,30 @@ module.exports = async (req, res) => {
     const event = JSON.parse(rawBody.toString('utf8'));
     const obj = event.data?.object || {};
     const metadata = obj.metadata || obj.subscription_details?.metadata || {};
-    const userId = metadata.user_id;
-    const rawPlan = String(metadata.plan || 'pro').toLowerCase();
-    const plan = rawPlan === 'elite' ? 'elite' : rawPlan === 'pro' ? 'pro' : 'standard';
+    const customerId = obj.customer || obj.customer_id || null;
+    const subscriptionId = obj.subscription || (obj.object === 'subscription' ? obj.id : null) || null;
+    const userId = metadata.user_id || await findUserIdByStripe({ customerId, subscriptionId });
+    const rawPlan = String(metadata.plan || '').toLowerCase();
+    const plan = rawPlan === 'elite' ? 'elite' : rawPlan === 'pro' ? 'pro' : null;
 
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-      if (userId) await updateProfile(userId, { plan, subscription_status: 'active', stripe_customer_id: obj.customer || null, stripe_subscription_id: obj.subscription || null });
+      if (userId) await updateProfile(userId, { ...(plan ? { plan } : {}), subscription_status: 'active', stripe_customer_id: customerId, stripe_subscription_id: subscriptionId });
     }
     if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
-      if (userId) await updateProfile(userId, { plan, subscription_status: obj.status || 'unknown', stripe_customer_id: obj.customer || null, stripe_subscription_id: obj.id || null, stripe_price_id: obj.items?.data?.[0]?.price?.id || null, subscription_current_period_end: obj.current_period_end ? new Date(obj.current_period_end * 1000).toISOString() : null });
+      if (userId) {
+        const status = String(obj.status || 'unknown').toLowerCase();
+        const active = ['active', 'trialing'].includes(status);
+        const patch = {
+          subscription_status: status,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: obj.id || subscriptionId,
+          stripe_price_id: obj.items?.data?.[0]?.price?.id || null,
+          subscription_current_period_end: obj.current_period_end ? new Date(obj.current_period_end * 1000).toISOString() : null
+        };
+        if (active && plan) patch.plan = plan;
+        if (!active && ['canceled', 'unpaid', 'incomplete_expired'].includes(status)) patch.plan = 'standard';
+        await updateProfile(userId, patch);
+      }
     }
     if (event.type === 'customer.subscription.deleted' && userId) await updateProfile(userId, { plan: 'standard', subscription_status: 'canceled', stripe_subscription_id: null, stripe_price_id: null, subscription_current_period_end: null });
     if (event.type === 'invoice.payment_failed' && userId) await updateProfile(userId, { subscription_status: 'past_due' });
