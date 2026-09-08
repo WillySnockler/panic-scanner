@@ -1,0 +1,76 @@
+/* Panic Scanner real sign-in / signup / demo bridge. */
+(function(){
+  'use strict';
+  var TK='pswAccessToken',RK='pswRefreshToken',DEMO='psDemoMode';
+  function token(){return localStorage.getItem(TK)||''}
+  function toastSafe(m){if(window.toast)window.toast(m);else alert(m)}
+  function authOverlay(){return document.getElementById('auth')}
+  function hideAuth(){var a=authOverlay();if(a)a.classList.add('hidden')}
+  function showAuth(){var a=authOverlay();if(a)a.classList.remove('hidden')}
+  function apiAuth(action,email,password){
+    return fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action,email:email,password:password})})
+      .then(function(r){return r.json().catch(function(){return{}}).then(function(d){if(!r.ok)throw Error(d.error||'Authentication failed.');return d})});
+  }
+  function setBusy(on){document.querySelectorAll('#auth button').forEach(function(b){b.disabled=on})}
+  async function login(){
+    var email=(document.getElementById('email')?.value||'').trim().toLowerCase();
+    var password=document.getElementById('password')?.value||'';
+    if(!email||!password){toastSafe('Enter your email and password.');return}
+    setBusy(true);
+    try{
+      var d=await apiAuth('login',email,password);
+      if(!d.access_token)throw Error('No active session was returned.');
+      localStorage.setItem(TK,d.access_token);if(d.refresh_token)localStorage.setItem(RK,d.refresh_token);
+      localStorage.setItem('psLoggedIn','1');sessionStorage.removeItem(DEMO);hideAuth();
+      if(window.loadAccount)await window.loadAccount();
+      toastSafe('Signed in successfully.');
+      setTimeout(function(){if(window.psFinalShowAccount)window.psFinalShowAccount()},160);
+    }catch(e){toastSafe(e.message||'Sign in failed.')}finally{setBusy(false)}
+  }
+  async function signup(){
+    var email=(document.getElementById('email')?.value||'').trim().toLowerCase();
+    var password=document.getElementById('password')?.value||'';
+    if(!email||password.length<8){toastSafe('Enter a valid email and a password of at least 8 characters.');return}
+    setBusy(true);
+    try{
+      var d=await apiAuth('signup',email,password);
+      if(d.access_token){
+        localStorage.setItem(TK,d.access_token);if(d.refresh_token)localStorage.setItem(RK,d.refresh_token);
+        localStorage.setItem('psLoggedIn','1');sessionStorage.removeItem(DEMO);hideAuth();
+        if(window.loadAccount)await window.loadAccount();
+        toastSafe('Account created and signed in.');
+        setTimeout(function(){if(window.psFinalShowAccount)window.psFinalShowAccount()},160);
+      }else{
+        toastSafe('Account created. Check your email to confirm it, then sign in.');
+      }
+    }catch(e){toastSafe(e.message||'Could not create the account.')}finally{setBusy(false)}
+  }
+  function demo(){
+    sessionStorage.setItem(DEMO,'1');
+    hideAuth();
+    toastSafe('Demo started — explore Panic Scanner with live market data. Sign in to save research and use your account.');
+    setTimeout(function(){try{if(window.analyze)window.analyze('AAPL','Apple Inc.')}catch(e){}},100);
+  }
+  function accountClick(){
+    if(window.psFinalShowAccount)return window.psFinalShowAccount();
+    if(token()&&window.openModal)return window.openModal('accountModal');
+    if(window.psFinalShowAuth)return window.psFinalShowAuth('login');
+    showAuth();
+  }
+  function install(){
+    window.enterApp=login;
+    window.createAccount=signup;
+    window.demoLogin=demo;
+    var a=authOverlay();
+    if(a){
+      /* The screenshot's existing auth page remains the visual baseline. */
+      a.style.display='';a.removeAttribute('aria-hidden');
+      if(!token()&&sessionStorage.getItem(DEMO)!=='1')a.classList.remove('hidden');
+    }
+    var b=document.getElementById('psffaccount');
+    if(b){b.textContent='Account';b.onclick=accountClick}
+    if(sessionStorage.getItem(DEMO)==='1'&&!token())hideAuth();
+  }
+  function boot(){install();setTimeout(install,80);setTimeout(install,400);setTimeout(install,1200)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
