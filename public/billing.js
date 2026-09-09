@@ -17,8 +17,8 @@
   function loadAuthFlow(){if(document.getElementById('psAuthFlowScript'))return;const s=document.createElement('script');s.id='psAuthFlowScript';s.src='/auth-flow-fix.js?v=4';document.head.appendChild(s)}
   function loadInvestigationClickFix(){if(document.getElementById('psInvestigationClickFix'))return;const s=document.createElement('script');s.id='psInvestigationClickFix';s.src='/investigation-click-fix.js?v=5';document.body.appendChild(s)}
   function loadStockSearchUI(){if(document.getElementById('psStockSearchUIScript'))return;const s=document.createElement('script');s.id='psStockSearchUIScript';s.src='/stock-search-ui.js?v=5';document.head.appendChild(s)}
-  function loadUltimate(){if(document.getElementById('psUltimateScannerFix'))return;const s=document.createElement('script');s.id='psUltimateScannerFix';s.src='/ultimate-scanner-fix.js?v=1';document.body.appendChild(s)}
-  function boot(){wire();loadWorkspaceScript();loadFrontFix();loadAuthFlow();recoverSession().then(refreshProfile);setTimeout(loadInvestigationClickFix,0);setTimeout(loadStockSearchUI,0);setTimeout(loadUltimate,250)}
+  function loadUltimate(){if(document.getElementById('psUltimateScannerFix'))return;const s=document.createElement('script');s.id='psUltimateScannerFix';s.src='/ultimate-scanner-fix.js?v=2';document.body.appendChild(s)}
+  function boot(){wire();loadWorkspaceScript();loadFrontFix();loadAuthFlow();recoverSession().then(refreshProfile);setTimeout(loadInvestigationClickFix,0);setTimeout(loadStockSearchUI,0);setTimeout(loadUltimate,50)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
   refreshProfile().then(wire);setInterval(function(){refreshProfile().then(wire)},60000);window.addEventListener('focus',function(){refreshProfile().then(wire)});document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshProfile().then(wire)});
 })();
