@@ -16,7 +16,6 @@ button{cursor:pointer!important;pointer-events:auto!important;touch-action:manip
 @media(max-width:620px){main,.container,.app,.shell{width:100%!important;max-width:100%!important;padding-left:10px!important;padding-right:10px!important;box-sizing:border-box}.search{width:calc(100% - 8px)!important}.search .primary{width:auto!important}.psMeta,.psQuick{width:calc(100% - 16px)!important}.psMatch{grid-template-columns:36px minmax(0,1fr) auto}.psLogo{width:32px;height:32px}.psOpen{padding:7px 8px!important}.analysisCard,.chartCard,.newsCard{padding:10px!important}.interactiveChart{height:215px!important}}
 `;
 document.head.appendChild(style);
-
 function safeName(v){return String(v||'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
 function enhance(){
  const s=document.querySelector('.search');
@@ -27,33 +26,22 @@ function enhance(){
 }
 function render(matches){const box=$('matches');if(!box)return;box.className='psMatches';box.innerHTML=(matches||[]).map(m=>{const sym=String(m.symbol||'').replace(/[^A-Za-z0-9._-]/g,'');const name=safeName(m.name||sym);const region=String(m.region||'').replace(/[<>]/g,'');const currency=String(m.currency||'').replace(/[<>]/g,'');return `<div class="psMatch"><div class="psLogo">${sym.slice(0,3)}</div><div><b class="psTicker">${sym}</b><span class="psCompany">${name}</span><span class="psSub">${region}${region&&currency?' · ':''}${currency}</span></div><button class="psOpen" type="button" data-s="${sym}" data-n="${name}">Open →</button></div>`}).join('')||'<div class="loading">No securities found. Try a ticker or company name.</div>';wireAllButtons()}
 window.searchStocks=async function(){const q=$('q')?.value.trim();if(!q)return $('q')?.focus();$('matchesSection').style.display='block';$('matches').innerHTML='<div class="loading">Searching live securities…</div>';try{const r=await fetch('/api/search?q='+encodeURIComponent(q));const d=await r.json();if(!r.ok)throw Error(d.error||'Search failed');render(d.matches||[]);$('matchesSection').scrollIntoView({behavior:'smooth',block:'nearest'})}catch(e){$('matches').innerHTML='<div class="loading red">'+safeName(e.message)+'</div>'}};
-
 function wireAllButtons(){
  document.querySelectorAll('button').forEach(btn=>{
   if(btn.dataset.psWired==='1')return;
-  btn.dataset.psWired='1';
-  btn.style.pointerEvents='auto';
-  btn.style.position=btn.style.position||'relative';
-  btn.style.zIndex=btn.style.zIndex||'50';
+  btn.dataset.psWired='1';btn.style.pointerEvents='auto';btn.style.position=btn.style.position||'relative';btn.style.zIndex=btn.style.zIndex||'50';
   btn.addEventListener('click',function(e){
-   const b=this;
-   const text=(b.innerText||b.textContent||'').trim().toLowerCase();
-   const oc=b.getAttribute('onclick');
-   if(text.includes('sell')||text.includes('close')){
-    e.preventDefault();e.stopPropagation();
-    if(oc){try{(0,eval)(oc)}catch(err){console.error('button action failed',err)}}
-    else if(typeof window.sell==='function')window.sell();
-    else if(typeof window.closePosition==='function')window.closePosition();
-    else if(typeof window.closeTrade==='function')window.closeTrade();
-    return;
-   }
+   const b=this,text=(b.innerText||b.textContent||'').trim().toLowerCase(),oc=b.getAttribute('onclick');
+   if(b.classList.contains('psClose')||b.closest('.psClose')){e.preventDefault();e.stopImmediatePropagation();if(typeof window.psClosePanel==='function')window.psClosePanel();else document.getElementById('psPanel')?.classList.remove('open');return;}
+   if(text.includes('sell')||text.includes('close')){e.preventDefault();e.stopPropagation();if(oc){try{(0,eval)(oc)}catch(err){console.error('button action failed',err)}}else if(typeof window.sell==='function')window.sell();else if(typeof window.closePosition==='function')window.closePosition();else if(typeof window.closeTrade==='function')window.closeTrade();return;}
    if(text.includes('deep search'))return;
    if(b.classList.contains('psOpen')){e.preventDefault();e.stopPropagation();window.analyze(b.dataset.s,b.dataset.n)}
   },true);
  });
 }
-
 const realInvestigate=window.investigate;
 if(typeof realInvestigate==='function'&&!window.__psDeepWrapped){window.__psDeepWrapped=true;window.__psManualDeepSearch=false;window.investigate=function(){if(!window.__psManualDeepSearch)return Promise.resolve();window.__psManualDeepSearch=false;return realInvestigate.apply(this,arguments)}}
+// Dedicated delegated handler: the AI panel is created dynamically, so its Close button must always work.
+document.addEventListener('click',function(e){const c=e.target&&e.target.closest?e.target.closest('#psPanel .psClose'):null;if(!c)return;e.preventDefault();e.stopImmediatePropagation();if(typeof window.psClosePanel==='function')window.psClosePanel();else document.getElementById('psPanel')?.classList.remove('open')},true);
 enhance();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});
 })();
