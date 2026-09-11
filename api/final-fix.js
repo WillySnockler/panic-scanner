@@ -26,8 +26,8 @@ function installCloseControl(){
   function delegated(ev){var t=ev.target;if(t&&t.closest&&t.closest('#psPanel .psClose,#psEmergencyClose'))hit(ev);}
   ['pointerdown','pointerup','touchstart','touchend','mousedown','mouseup','click'].forEach(function(t){document.addEventListener(t,delegated,{capture:true,passive:false});});
   function sync(){var p=document.getElementById('psPanel');if(p&&p.classList.contains('open')){e.style.setProperty('display','flex','important');p.style.setProperty('z-index','2147483646','important');var c=p.querySelector('.psClose');if(c){c.style.setProperty('position','fixed','important');c.style.setProperty('top','10px','important');c.style.setProperty('right','10px','important');c.style.setProperty('z-index','2147483647','important');c.style.setProperty('width','140px','important');c.style.setProperty('height','56px','important');c.style.setProperty('pointer-events','auto','important');}}else e.style.setProperty('display','none','important');}
-  sync();setInterval(sync,100);
-  new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  sync();
+  setInterval(sync,500);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installCloseControl);else installCloseControl();
 })();
