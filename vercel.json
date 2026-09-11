@@ -1,6 +1,7 @@
 {
   "routes": [
     { "src": "^/$", "dest": "/api/app-wrapper" },
+    { "src": "^/api/account$", "dest": "/api/account-safe" },
     { "src": "^/final-fix\\.js$", "dest": "/api/final-fix" },
     { "handle": "filesystem" }
   ]
