@@ -1,7 +1,7 @@
 {
   "routes": [
     { "src": "^/$", "dest": "/api/app" },
-    { "src": "^/final-fix\\.js$", "dest": "/close-fix.js" },
+    { "src": "^/final-fix\\.js$", "dest": "/api/final-fix" },
     { "handle": "filesystem" }
   ]
 }
