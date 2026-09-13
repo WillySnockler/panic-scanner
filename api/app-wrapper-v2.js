@@ -1,2 +1,7 @@
-// Clean production wrapper: preserve the original app response without injecting UI workarounds.
-module.exports = require('./app');
+const app=require('./app');
+module.exports=async function(req,res){
+ const originalEnd=res.end.bind(res),originalWrite=res.write.bind(res);let chunks=[];
+ res.write=function(chunk,encoding){if(chunk)chunks.push(Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk,encoding));return true};
+ res.end=function(chunk,encoding){if(chunk)chunks.push(Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk,encoding));let body=Buffer.concat(chunks).toString('utf8');if(req.method==='GET'&&typeof body==='string'&&body.includes('</body>')&&!body.includes('/ps-enhance.js'))body=body.replace('</body>','<script src="/ps-enhance.js?v=1"></script></body>');res.write=originalWrite;res.end=originalEnd;return res.end(Buffer.from(body,'utf8'))};
+ return app(req,res);
+};
