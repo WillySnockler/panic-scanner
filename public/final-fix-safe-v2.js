@@ -8,3 +8,4 @@ function run(){wire();keepOpen();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 setTimeout(run,100);setTimeout(run,500);setTimeout(run,1500);
 })();
+(function(){var s=document.createElement('script');s.src='/panic-radar.js?v=20260913';s.async=true;document.head.appendChild(s);})();
